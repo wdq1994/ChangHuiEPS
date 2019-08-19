@@ -1,0 +1,361 @@
+C166 COMPILER V7.57.0, GPT1                                                                08/19/2019 16:33:27 PAGE 1   
+
+
+C166 COMPILER V7.57.0, COMPILATION OF MODULE GPT1
+OBJECT MODULE PLACED IN .\OUTPUT\GPT1.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\Keil_v5\C166\BIN\C166.EXE GPT1.c MODV2 BROWSE MODV2 DEBUG PRINT(.\LISTING\GP
+                    -T1.lst) TABS(2) OBJECT(.\OUTPUT\GPT1.obj) 
+
+ stmt lvl     source
+
+    1         //****************************************************************************
+    2         // @Module        General Purpose Timer Unit (GPT1)
+    3         // @Filename      GPT1.c
+    4         // @Project       EPS_TestBench_20190620.dav
+    5         //----------------------------------------------------------------------------
+    6         // @Controller    Infineon XC2365B-40F80
+    7         //
+    8         // @Compiler      Keil
+    9         //
+   10         // @Codegenerator 0.2
+   11         //
+   12         // @Description   This file contains functions that use the GPT1 module.
+   13         //
+   14         //----------------------------------------------------------------------------
+   15         // @Date          2019/8/7 14:58:27
+   16         //
+   17         //****************************************************************************
+   18         
+   19         // USER CODE BEGIN (GPT1_General,1)
+   20         
+   21         // USER CODE END
+   22         
+   23         
+   24         
+   25         //****************************************************************************
+   26         // @Project Includes
+   27         //****************************************************************************
+   28         
+   29         #include "MAIN.h"
+   30         
+   31         // USER CODE BEGIN (GPT1_General,2)
+   32         
+   33         // USER CODE END
+   34         
+   35         
+   36         //****************************************************************************
+   37         // @Macros
+   38         //****************************************************************************
+   39         
+   40         // USER CODE BEGIN (GPT1_General,3)
+   41         
+   42         // USER CODE END
+   43         
+   44         
+   45         //****************************************************************************
+   46         // @Defines
+   47         //****************************************************************************
+   48         
+   49         // USER CODE BEGIN (GPT1_General,4)
+   50         
+   51         // USER CODE END
+   52         
+   53         
+   54         //****************************************************************************
+C166 COMPILER V7.57.0, GPT1                                                                08/19/2019 16:33:27 PAGE 2   
+
+   55         // @Typedefs
+   56         //****************************************************************************
+   57         
+   58         // USER CODE BEGIN (GPT1_General,5)
+   59         
+   60         // USER CODE END
+   61         
+   62         
+   63         //****************************************************************************
+   64         // @Imported Global Variables
+   65         //****************************************************************************
+   66         
+   67         // USER CODE BEGIN (GPT1_General,6)
+   68         
+   69         // USER CODE END
+   70         
+   71         
+   72         //****************************************************************************
+   73         // @Global Variables
+   74         //****************************************************************************
+   75         
+   76         // USER CODE BEGIN (GPT1_General,7)
+   77         extern uword GPT1_T2_FLAG;
+   78         extern uword GPT1_T3_FLAG;
+   79         uword  t_10ms = 0;
+   80         // USER CODE END
+   81         
+   82         
+   83         //****************************************************************************
+   84         // @External Prototypes
+   85         //****************************************************************************
+   86         
+   87         // USER CODE BEGIN (GPT1_General,8)
+   88         
+   89         // USER CODE END
+   90         
+   91         
+   92         //****************************************************************************
+   93         // @Prototypes Of Local Functions
+   94         //****************************************************************************
+   95         
+   96         // USER CODE BEGIN (GPT1_General,9)
+   97         
+   98         // USER CODE END
+   99         
+  100         
+  101         //****************************************************************************
+  102         // @Function      void GPT1_vInit(void) 
+  103         //
+  104         //----------------------------------------------------------------------------
+  105         // @Description   This is the initialization function of the GPT1 function 
+  106         //                library. It is assumed that the SFRs used by this library 
+  107         //                are in reset state. 
+  108         //
+  109         //----------------------------------------------------------------------------
+  110         // @Returnvalue   None
+  111         //
+  112         //----------------------------------------------------------------------------
+  113         // @Parameters    None
+  114         //
+  115         //----------------------------------------------------------------------------
+  116         // @Date          2019/8/7
+C166 COMPILER V7.57.0, GPT1                                                                08/19/2019 16:33:27 PAGE 3   
+
+  117         //
+  118         //****************************************************************************
+  119         
+  120         // USER CODE BEGIN (Init,1)
+  121         
+  122         // USER CODE END
+  123         
+  124         void GPT1_vInit(void)
+  125         {
+  126  1        // USER CODE BEGIN (Init,2)
+  127  1      
+  128  1        // USER CODE END
+  129  1        ///  -----------------------------------------------------------------------
+  130  1        ///  Configuration of Timer Block Prescaler 1:
+  131  1        ///  -----------------------------------------------------------------------
+  132  1        GPT12E_KSCCFG  =  0x0003;      // Module Enable
+  133  1      
+  134  1        _nop_();  // one cycle delay 
+  135  1      
+  136  1        _nop_();  // one cycle delay 
+  137  1      
+  138  1      
+  139  1      
+  140  1        ///  -----------------------------------------------------------------------
+  141  1        ///  Configuration of Timer Block Prescaler 1:
+  142  1        ///  -----------------------------------------------------------------------
+  143  1        ///  - prescaler for timer block 1 is 8
+  144  1      
+  145  1      
+  146  1        ///  -----------------------------------------------------------------------
+  147  1        ///  Configuration of the GPT1 Core Timer 3:
+  148  1        ///  -----------------------------------------------------------------------
+  149  1        ///  - timer 3 works in timer mode
+  150  1        ///  - external up/down control is disabled
+  151  1        ///  - prescaler factor is 16
+  152  1        ///  - up/down control bit is reset
+  153  1        ///  - alternate output function T3OUT (P7.0) is disabled
+  154  1        ///  - timer 3 output toggle latch (T3OTL) is set to 0
+  155  1      
+  156  1        GPT12E_T3CON   =  0x0001;      // load timer 3 control register
+  157  1        GPT12E_T3      =  0x9E58;      // load timer 3 register
+  158  1        ///  - prescaler for timer block 1 is 8
+  159  1      
+  160  1        ///  -----------------------------------------------------------------------
+  161  1        ///  Configuration of the GPT1 Auxiliary Timer 2:
+  162  1        ///  -----------------------------------------------------------------------
+  163  1        ///  - timer 2 works in timer mode
+  164  1        ///  - external up/down control is disabled
+  165  1        ///  - prescaler factor is 16
+  166  1        ///  - up/down control bit is reset
+  167  1        ///  - timer 2 run bit is reset
+  168  1      
+  169  1        GPT12E_T2CON   =  0x0001;      // load timer 2 control register
+  170  1        GPT12E_T2      =  0x3CB0;      // load timer 2 register
+  171  1        ///  - prescaler for timer block 1 is 8
+  172  1      
+  173  1        ///  -----------------------------------------------------------------------
+  174  1        ///  Configuration of the GPT1 Auxiliary Timer 4:
+  175  1        ///  -----------------------------------------------------------------------
+  176  1        ///  - timer 4 works in timer mode
+  177  1        ///  - external up/down control is disabled
+  178  1        ///  - prescaler factor is 8
+C166 COMPILER V7.57.0, GPT1                                                                08/19/2019 16:33:27 PAGE 4   
+
+  179  1        ///  - up/down control bit is reset
+  180  1        ///  - timer 4 run bit is reset
+  181  1      
+  182  1        GPT12E_T4CON   =  0x0000;      // load timer 4 control register
+  183  1        GPT12E_T4      =  0x0000;      // load timer 4 register
+  184  1        ///  - prescaler for timer block 1 is 8
+  185  1      
+  186  1        ///  -----------------------------------------------------------------------
+  187  1        ///  Configuration of the used GPT1 Port Pins:
+  188  1        ///  -----------------------------------------------------------------------
+  189  1      
+  190  1      
+  191  1      
+  192  1        ///  -----------------------------------------------------------------------
+  193  1        ///  Configuration of the used GPT1 Interrupts:
+  194  1        ///  -----------------------------------------------------------------------
+  195  1        ///  timer 2 service request node configuration:
+  196  1        ///  - timer 2 interrupt priority level (ILVL) = 4
+  197  1        ///  - timer 2 interrupt group level (GLVL) = 0
+  198  1        ///  - timer 2 group priority extension (GPX) = 0
+  199  1      
+  200  1        GPT12E_T2IC    =  0x0050;     
+  201  1      
+  202  1        ///  timer 3 service request node configuration:
+  203  1        ///  - timer 3 interrupt priority level (ILVL) = 1
+  204  1        ///  - timer 3 interrupt group level (GLVL) = 0
+  205  1        ///  - timer 3 group priority extension (GPX) = 0
+  206  1      
+  207  1        GPT12E_T3IC    =  0x0044;     
+  208  1      
+  209  1      
+  210  1        // USER CODE BEGIN (GPT1_Function,3)
+  211  1      
+  212  1        // USER CODE END
+  213  1      
+  214  1        GPT12E_T3CON_T3R  =  1;        // set timer 3 run bit
+  215  1      
+  216  1      } //  End of function GPT1_viTmr4
+  217         
+  218         
+  219         //****************************************************************************
+  220         // @Function      void GPT1_viTmr3(void) 
+  221         //
+  222         //----------------------------------------------------------------------------
+  223         // @Description   This is the interrupt service routine for the GPT1 timer 3. 
+  224         //                It is called up in the case of over or underflow of the 
+  225         //                timer 3 register.
+  226         //                If the incremental interface mode is selected it is called 
+  227         //                up if count edge or count direction was detected.
+  228         //                
+  229         //                Please note that you have to add application specific code 
+  230         //                to this function.
+  231         //
+  232         //----------------------------------------------------------------------------
+  233         // @Returnvalue   None
+  234         //
+  235         //----------------------------------------------------------------------------
+  236         // @Parameters    None
+  237         //
+  238         //----------------------------------------------------------------------------
+  239         // @Date          2019/8/7
+  240         //
+C166 COMPILER V7.57.0, GPT1                                                                08/19/2019 16:33:27 PAGE 5   
+
+  241         //****************************************************************************
+  242         
+  243         // USER CODE BEGIN (Tmr3,1)
+  244         
+  245         // USER CODE END
+  246         
+  247         void GPT1_viTmr3(void) interrupt T3INT
+  248         {
+  249  1        // USER CODE BEGIN (Tmr3,2)
+  250  1          GPT12E_T3      =  0x9E58;      // load timer 3 register
+  251  1          GPT1_T3_FLAG = 1;
+  252  1          
+  253  1        // USER CODE END
+  254  1      
+  255  1      
+  256  1        // USER CODE BEGIN (Tmr3,5)
+  257  1      
+  258  1        // USER CODE END
+  259  1      
+  260  1      } //  End of function GPT1_viTmr3
+  261         
+  262         
+  263         //****************************************************************************
+  264         // @Function      void GPT1_viTmr2(void) 
+  265         //
+  266         //----------------------------------------------------------------------------
+  267         // @Description   This is the interrupt service routine for the GPT1 timer 2. 
+  268         //                It is called up in the case of over or underflow of the 
+  269         //                timer 2 register.
+  270         //                If the incremental interface mode is selected and the 
+  271         //                interrupt for this mode is not disabled it is called up if 
+  272         //                count edge or count direction was detected.
+  273         //                
+  274         //                Please note that you have to add application specific code 
+  275         //                to this function.
+  276         //
+  277         //----------------------------------------------------------------------------
+  278         // @Returnvalue   None
+  279         //
+  280         //----------------------------------------------------------------------------
+  281         // @Parameters    None
+  282         //
+  283         //----------------------------------------------------------------------------
+  284         // @Date          2019/8/7
+  285         //
+  286         //****************************************************************************
+  287         
+  288         // USER CODE BEGIN (Tmr2,1)
+  289         
+  290         // USER CODE END
+  291         
+  292         void GPT1_viTmr2(void) interrupt T2INT
+  293         {
+  294  1        // USER CODE BEGIN (Tmr2,2)
+  295  1      //    GPT1_T2_FLAG = 1;
+  296  1          GPT12E_T2      =  0x3CB0;      // load timer 3 register
+  297  1          t_10ms++;
+  298  1        // USER CODE END
+  299  1      
+  300  1      
+  301  1        // USER CODE BEGIN (Tmr2,5)
+  302  1          
+C166 COMPILER V7.57.0, GPT1                                                                08/19/2019 16:33:27 PAGE 6   
+
+  303  1            CAN_T_MO2();
+  304  1      
+  305  1          if(t_10ms % 2 == 0)
+  306  1          { // 20ms Vehicle Signal
+  307  2            CAN_T_MO3();
+  308  2          }
+  309  1        // USER CODE END
+  310  1      
+  311  1      } //  End of function GPT1_viTmr2
+  312         
+  313         
+  314         
+  315         
+  316         // USER CODE BEGIN (GPT1_General,10)
+  317         
+  318         // USER CODE END
+  319         
+*** WARNING C174 IN LINE 381 OF GPT1.c: 'Scs_EnableHighPrecOsc': unreferenced 'static' function
+
+
+MODULE INFORMATION:   INITIALIZED  UNINITIALIZED
+  CODE SIZE        =         158     --------
+  NEAR-CONST SIZE  =    --------     --------
+  FAR-CONST SIZE   =    --------     --------
+  HUGE-CONST SIZE  =    --------     --------
+  XHUGE-CONST SIZE =    --------     --------
+  NEAR-DATA SIZE   =           2     --------
+  FAR-DATA SIZE    =    --------     --------
+  XHUGE-DATA SIZE  =    --------     --------
+  IDATA-DATA SIZE  =    --------     --------
+  SDATA-DATA SIZE  =    --------     --------
+  BDATA-DATA SIZE  =    --------     --------
+  HUGE-DATA SIZE   =    --------     --------
+  BIT SIZE         =    --------     --------
+  INIT'L SIZE      =           6     --------
+END OF MODULE INFORMATION.
+
+
+C166 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

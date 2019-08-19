@@ -1,0 +1,527 @@
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 1   
+
+
+C166 COMPILER V7.57.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\OUTPUT\MAIN.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\Keil_v5\C166\BIN\C166.EXE MAIN.c MODV2 BROWSE MODV2 DEBUG PRINT(.\LISTING\MA
+                    -IN.lst) TABS(2) OBJECT(.\OUTPUT\MAIN.obj) 
+
+ stmt lvl     source
+
+    1         //****************************************************************************
+    2         // @Module        Project Settings
+    3         // @Filename      MAIN.c
+    4         // @Project       EPS_TestBench_20190620.dav
+    5         //----------------------------------------------------------------------------
+    6         // @Controller    Infineon XC2365B-40F80
+    7         //
+    8         // @Compiler      Keil
+    9         //
+   10         // @Codegenerator 0.2
+   11         //
+   12         // @Description   This file contains the project initialization function.
+   13         //
+   14         //----------------------------------------------------------------------------
+   15         // @Date          2019/8/7 14:58:25
+   16         //
+   17         //****************************************************************************
+   18         
+   19         // USER CODE BEGIN (MAIN_General,1)
+   20         
+   21         // USER CODE END
+   22         
+   23         
+   24         
+   25         //****************************************************************************
+   26         // @Project Includes
+   27         //****************************************************************************
+   28         
+   29         #include "MAIN.h"
+   30         
+   31         // USER CODE BEGIN (MAIN_General,2)
+   32         
+   33         // USER CODE END
+   34         
+   35         
+   36         //****************************************************************************
+   37         // @Macros
+   38         //****************************************************************************
+   39         
+   40         // USER CODE BEGIN (MAIN_General,3)
+   41         
+   42         // USER CODE END
+   43         
+   44         
+   45         //****************************************************************************
+   46         // @Defines
+   47         //****************************************************************************
+   48         
+   49         // USER CODE BEGIN (MAIN_General,4)
+   50         
+   51         // USER CODE END
+   52         
+   53         
+   54         //****************************************************************************
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 2   
+
+   55         // @Typedefs
+   56         //****************************************************************************
+   57         
+   58         // USER CODE BEGIN (MAIN_General,5)
+   59         
+   60         // USER CODE END
+   61         
+   62         
+   63         //****************************************************************************
+   64         // @Imported Global Variables
+   65         //****************************************************************************
+   66         
+   67         // USER CODE BEGIN (MAIN_General,6)
+   68         
+   69         // USER CODE END
+   70         
+   71         
+   72         //****************************************************************************
+   73         // @Global Variables
+   74         //****************************************************************************
+   75         
+   76         // USER CODE BEGIN (MAIN_General,7)
+   77         uword GPT1_T2_FLAG = 0;
+   78         uword GPT1_T3_FLAG = 0;
+   79         ubyte t_200ms = 0;        //Times Parameter  t_200ms
+   80         uword vehicleCommand = 0;
+   81         uword VehicleSpeedVSOSig= 0;
+   82         ubyte t_5ms = 0;
+   83         uword t_1000ms = 0;
+   84         ubyte btnTrigNow = 0;
+   85         ubyte btnTrigLast = 0;
+   86         ubyte btnTrigUp = 0;
+   87         // USER CODE END
+   88         
+   89         
+   90         //****************************************************************************
+   91         // @External Prototypes
+   92         //****************************************************************************
+   93         
+   94         // USER CODE BEGIN (MAIN_General,8)
+   95         
+   96         // USER CODE END
+   97         
+   98         
+   99         //****************************************************************************
+  100         // @Prototypes Of Local Functions
+  101         //****************************************************************************
+  102         
+  103         // USER CODE BEGIN (MAIN_General,9)
+  104         // hardware initial 
+  105         //  LED:P7.1 -> RED     >30 km/h
+  106         //      P7.2 -> GREEN   <15 km/h
+  107         //      P7.3 -> BLUE    15~30 km/h
+  108           void hwInit(void)
+  109           {
+  110  1          P7_OUT_P1 = 0;
+  111  1          P7_OUT_P2 = 0;
+  112  1          P7_OUT_P3 = 0;
+  113  1        }
+  114         
+  115         // software initial 
+  116         //  VehicleSpeedVSOSig = 0km/h
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 3   
+
+  117           void swInit(void)
+  118           {
+  119  1            VehicleSpeedVSOSig = 0;
+  120  1        }
+  121           
+  122         //  LED display
+  123         //  LED:P7.1 -> RED     >40 km/h
+  124         //      P7.2 -> GREEN   <15 km/h
+  125         //      P7.3 -> BLUE    15~40 km/h
+  126           void ledDisplay(void)
+  127           {
+  128  1          
+  129  1            if(VehicleSpeedVSOSig <= 15 && VehicleSpeedVSOSig > 0)
+  130  1            {
+  131  2              P7_OUT_P2 = 0;    P7_OUT_P2 = 1;    P7_OUT_P3 = 0;
+  132  2            }
+  133  1            
+  134  1            else if(VehicleSpeedVSOSig > 15 && VehicleSpeedVSOSig <=40 )
+  135  1            {
+  136  2              P7_OUT_P2 = 0;    P7_OUT_P2 = 0;    P7_OUT_P3 = 1;
+  137  2            }
+  138  1            else if(VehicleSpeedVSOSig > 40 && VehicleSpeedVSOSig <=55 )
+  139  1            {
+  140  2              P7_OUT_P2 = 1;    P7_OUT_P2 = 0;    P7_OUT_P3 = 0;
+  141  2            }
+  142  1            else
+  143  1            {;}
+  144  1        }
+  145         // USER CODE END
+  146         
+  147         
+  148         //****************************************************************************
+  149         // @Function      void MAIN_vInit(void) 
+  150         //
+  151         //----------------------------------------------------------------------------
+  152         // @Description   This function initializes the microcontroller.
+  153         //
+  154         //----------------------------------------------------------------------------
+  155         // @Returnvalue   None
+  156         //
+  157         //----------------------------------------------------------------------------
+  158         // @Parameters    None
+  159         //
+  160         //----------------------------------------------------------------------------
+  161         // @Date          2019/8/7
+  162         //
+  163         //****************************************************************************
+  164         
+  165         // USER CODE BEGIN (Init,1)
+  166         
+  167         // USER CODE END
+  168         
+  169         void MAIN_vInit(void)
+  170         {
+  171  1        // USER CODE BEGIN (Init,2)
+  172  1      
+  173  1        // USER CODE END
+  174  1      
+  175  1        //   globally disable interrupts
+  176  1        PSW_IEN        =  0;          
+  177  1      
+  178  1      
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 4   
+
+  179  1        ///  -----------------------------------------------------------------------
+  180  1        ///  Configuration of the System Clock:
+  181  1        ///  -----------------------------------------------------------------------
+  182  1        ///  - VCO clock used, input clock is connected
+  183  1        ///  - input frequency is 8.00 MHz
+  184  1        ///  - system clock is 80.00 MHz
+  185  1      
+  186  1        MAIN_vUnlockProtecReg();     // unlock write security
+  187  1      
+  188  1        MAIN_vChangeFreq();          // load PLL control register
+  189  1      
+  190  1        //   -----------------------------------------------------------------------
+  191  1        //   Initialization of the Peripherals:
+  192  1        //   -----------------------------------------------------------------------
+  193  1      
+  194  1        //   initializes the Parallel Ports
+  195  1        IO_vInit();
+  196  1      
+  197  1        //   initializes the General Purpose Timer Unit (GPT1)
+  198  1        GPT1_vInit();
+  199  1      
+  200  1        //   initializes the General Purpose Timer Unit (GPT2)
+  201  1        GPT2_vInit();
+  202  1      
+  203  1        //   initializes the MultiCAN Module (CAN)
+  204  1        CAN_vInit();
+  205  1      
+  206  1      
+  207  1        //   -----------------------------------------------------------------------
+  208  1        //   Initialization of the Bank Select registers:
+  209  1        //   -----------------------------------------------------------------------
+  210  1      
+  211  1      
+  212  1        // USER CODE BEGIN (Init,3)
+  213  1      
+  214  1        // USER CODE END
+  215  1      
+  216  1        MAIN_vLockProtecReg();       // lock write security
+  217  1      
+  218  1        //   globally enable interrupts
+  219  1        PSW_IEN        =  1;          
+  220  1      
+  221  1      } //  End of function MAIN_vInit
+  222         
+  223         
+  224         //****************************************************************************
+  225         // @Function      void MAIN_vUnlockProtecReg(void) 
+  226         //
+  227         //----------------------------------------------------------------------------
+  228         // @Description   This function makes it possible to write one protected 
+  229         //                register.
+  230         //
+  231         //----------------------------------------------------------------------------
+  232         // @Returnvalue   None
+  233         //
+  234         //----------------------------------------------------------------------------
+  235         // @Parameters    None
+  236         //
+  237         //----------------------------------------------------------------------------
+  238         // @Date          2019/8/7
+  239         //
+  240         //****************************************************************************
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 5   
+
+  241         
+  242         // USER CODE BEGIN (UnlockProtecReg,1)
+  243         
+  244         // USER CODE END
+  245         
+  246         void MAIN_vUnlockProtecReg(void)
+  247         {
+  248  1        uword uwPASSWORD;
+  249  1      
+  250  1          SCU_SLC = 0xAAAA;                   // command 0
+  251  1          SCU_SLC = 0x5554;                   // command 1
+  252  1      
+  253  1          uwPASSWORD = SCU_SLS & 0x00FF;
+  254  1          uwPASSWORD = (~uwPASSWORD) & 0x00FF;
+  255  1      
+  256  1          SCU_SLC = 0x9600 | uwPASSWORD;      // command 2
+  257  1          SCU_SLC = 0x0000;                   // command 3
+  258  1      
+  259  1      } //  End of function MAIN_vUnlockProtecReg
+  260         
+  261         
+  262         //****************************************************************************
+  263         // @Function      void MAIN_vLockProtecReg(void) 
+  264         //
+  265         //----------------------------------------------------------------------------
+  266         // @Description   This function makes it possible to lock one protected 
+  267         //                register.
+  268         //
+  269         //----------------------------------------------------------------------------
+  270         // @Returnvalue   None
+  271         //
+  272         //----------------------------------------------------------------------------
+  273         // @Parameters    None
+  274         //
+  275         //----------------------------------------------------------------------------
+  276         // @Date          2019/8/7
+  277         //
+  278         //****************************************************************************
+  279         
+  280         // USER CODE BEGIN (LockProtecReg,1)
+  281         
+  282         // USER CODE END
+  283         
+  284         void MAIN_vLockProtecReg(void)
+  285         {
+  286  1        uword uwPASSWORD;
+  287  1      
+  288  1          SCU_SLC = 0xAAAA;                   // command 0
+  289  1          SCU_SLC = 0x5554;                   // command 1
+  290  1      
+  291  1          uwPASSWORD = SCU_SLS & 0x00FF;
+  292  1          uwPASSWORD = (~uwPASSWORD) & 0x00FF;
+  293  1      
+  294  1          SCU_SLC = 0x9600 | uwPASSWORD;      // command 2
+  295  1          SCU_SLC = 0x1800;                   // command 3; new PASSWOR is 0x00
+  296  1      
+  297  1          uwPASSWORD = SCU_SLS & 0x00FF;
+  298  1          uwPASSWORD = (~uwPASSWORD) & 0x00FF;
+  299  1          SCU_SLC = 0x8E00 | uwPASSWORD;      // command 4
+  300  1      
+  301  1      } //  End of function MAIN_vLockProtecReg
+  302         
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 6   
+
+  303         
+  304         //****************************************************************************
+  305         // @Function      void MAIN_vChangeFreq(void) 
+  306         //
+  307         //----------------------------------------------------------------------------
+  308         // @Description   This function is used to select the external crystal and
+  309         //                configure the system frequency to 80Mhz/66Mhz.
+  310         //
+  311         //----------------------------------------------------------------------------
+  312         // @Returnvalue   None
+  313         //
+  314         //----------------------------------------------------------------------------
+  315         // @Parameters    None
+  316         //
+  317         //----------------------------------------------------------------------------
+  318         // @Date          2019/8/7
+  319         //
+  320         //****************************************************************************
+  321         
+  322         // USER CODE BEGIN (ChangeFreq,1)
+  323         
+  324         // USER CODE END
+  325         
+  326         void MAIN_vChangeFreq(void)
+  327         {
+  328  1        Scs_ErrorType Error;
+  329  1      
+  330  1        Scs_EnableHighPrecOsc(1U);
+  331  1      
+  332  1        //For application and internal application resets, the complete PLL configuration could be avoided
+  333  1        //The entry from application resets and internal application reset is covered in the following different
+             -iation
+  334  1        //in int/ext clock in lock/unlocked state.
+  335  1      
+  336  1        if  ((SCU_PLLSTAT & 0x0004) == 0x0004)       // fR derived from Internal clock
+  337  1        {
+  338  2          //Normal startup state during boot and the clock
+  339  2          //has to be in the next step configured on the external crystal
+  340  2          //use XTAL/VCO, count XTAL clock
+  341  2      
+  342  2          Scs_InitTimer();       // initialize CCU6 timer T13 for SCS driver
+  343  2      
+  344  2          // perform transition from base mode to normal mode, check for error
+  345  2          Error = Scs_GoFromBaseModeToNormalMode();
+  346  2          if(Error)
+  347  2          {
+  348  3            for(;;)      // this part of code should not be reached
+  349  3            {
+  350  4              NOP();
+  351  4            }
+  352  3          }
+  353  2      
+  354  2          if ((SCU_PLLSTAT & 0x1009) == 0x1009)      // fR derived from external crystal clock + VCO is locked
+  355  2          {
+  356  3            //usually after an application reset where clock need not be configured again.
+  357  3            //check K2/P/N values and decide whether these values have to be adapted based on application needs.
+  358  3            NOP();
+  359  3            //usually the PLL losss of Lock TRAP schould be enabled here.
+  360  3          }
+  361  2          else       //fR derived from external crystal clock + VCO is not locked
+  362  2          {
+  363  3                     //estimate the K1 value and the current frequency
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 7   
+
+  364  3                     //reduce K2/P/N values in steps so that the frequency
+  365  3                     //jumps is limited to 20MHz or factor of 5 whichever is minimum
+  366  3            NOP();
+  367  3          }
+  368  2      
+  369  2      
+  370  2        }
+  371  1      
+  372  1      } //  End of function MAIN_vChangeFreq
+  373         
+  374         
+  375         //****************************************************************************
+  376         // @Function      void main(void) 
+  377         //
+  378         //----------------------------------------------------------------------------
+  379         // @Description   This is the main function.
+  380         //
+  381         //----------------------------------------------------------------------------
+  382         // @Returnvalue   None
+  383         //
+  384         //----------------------------------------------------------------------------
+  385         // @Parameters    None
+  386         //
+  387         //----------------------------------------------------------------------------
+  388         // @Date          2019/8/7
+  389         //
+  390         //****************************************************************************
+  391         
+  392         // USER CODE BEGIN (Main,1)
+  393         
+  394         // USER CODE END
+  395         
+  396         void main(void)
+  397         {
+  398  1        // USER CODE BEGIN (Main,2)
+  399  1      
+  400  1        // USER CODE END
+  401  1      
+  402  1        MAIN_vInit();
+  403  1      
+  404  1        // USER CODE BEGIN (Main,3)
+  405  1      //  hwInit();
+  406  1      //  swInit();
+  407  1          P7_IN_P2 = 1;
+  408  1          btnTrigLast = 1;
+  409  1        // USER CODE END
+  410  1      
+  411  1        while(1)
+  412  1        {
+  413  2      
+  414  2         // USER CODE BEGIN (Main,4)  
+  415  2      
+  416  2            if(GPT1_T3_FLAG == 1)
+  417  2            {// 5ms
+  418  3              GPT1_T3_FLAG = 0;
+  419  3              t_5ms++;  
+  420  3              
+  421  3              if(t_5ms > 200)
+  422  3              {
+  423  4                  t_1000ms++;
+  424  4                  t_5ms = 0;
+  425  4              }
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 8   
+
+  426  3              
+  427  3              if(t_5ms % 10 == 1)
+  428  3              {
+  429  4                  //50ms扫描一次键盘
+  430  4                  btnTrigNow = P7_IN_P2;
+  431  4                  //按键按下
+  432  4                  if(btnTrigNow == 0 && btnTrigLast == 1)
+  433  4                  {
+  434  5                      
+  435  5                  }
+  436  4                  //按键松开  
+  437  4                  else if(btnTrigNow == 1 && btnTrigLast == 0)
+  438  4                  {
+  439  5                      btnTrigUp = 1;
+  440  5                      t_1000ms = 0;
+  441  5                      GPT1_vStartTmr_GPT1_TIMER_2();
+  442  5                  }
+  443  4                  //按键连续按下
+  444  4                  else if(btnTrigNow == 0 && btnTrigLast == 0)
+  445  4                  {}
+  446  4                  //按键连续松开
+  447  4                  else if(btnTrigNow == 1 && btnTrigLast == 1)
+  448  4                  {}            
+  449  4                  else{}
+  450  4                    
+  451  4                  btnTrigLast = btnTrigNow;
+  452  4                  
+  453  4              }
+  454  3              //按键按下且过100s后，停止报文发送
+  455  3              if(btnTrigUp == 1 && (t_1000ms > DELAYTIME))
+  456  3              {
+  457  4                  btnTrigUp = 0;
+  458  4                  GPT1_vStopTmr_GPT1_TIMER_2();
+  459  4                  t_1000ms = 0;
+  460  4              }
+  461  3              
+  462  3            }
+  463  2            else
+  464  2            {
+  465  3            
+  466  3            }
+  467  2         // USER CODE END
+  468  2      
+  469  2        }
+  470  1      
+  471  1      } //  End of function main
+  472         
+  473         
+  474         
+  475         // USER CODE BEGIN (MAIN_General,10)
+  476         
+  477         // USER CODE END
+  478         
+  479         
+
+
+MODULE INFORMATION:   INITIALIZED  UNINITIALIZED
+  CODE SIZE        =         434     --------
+  NEAR-CONST SIZE  =    --------     --------
+  FAR-CONST SIZE   =    --------     --------
+  HUGE-CONST SIZE  =    --------     --------
+  XHUGE-CONST SIZE =    --------     --------
+C166 COMPILER V7.57.0, MAIN                                                                08/19/2019 16:33:27 PAGE 9   
+
+  NEAR-DATA SIZE   =          15     --------
+  FAR-DATA SIZE    =    --------     --------
+  XHUGE-DATA SIZE  =    --------     --------
+  IDATA-DATA SIZE  =    --------     --------
+  SDATA-DATA SIZE  =    --------     --------
+  BDATA-DATA SIZE  =    --------     --------
+  HUGE-DATA SIZE   =    --------     --------
+  BIT SIZE         =    --------     --------
+  INIT'L SIZE      =          60     --------
+END OF MODULE INFORMATION.
+
+
+C166 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

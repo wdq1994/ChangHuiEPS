@@ -1,0 +1,1521 @@
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 1   
+
+
+C166 COMPILER V7.57.0, COMPILATION OF MODULE SCS
+OBJECT MODULE PLACED IN .\OUTPUT\SCS.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\Keil_v5\C166\BIN\C166.EXE SCS.c MODV2 BROWSE MODV2 DEBUG PRINT(.\LISTING\SCS
+                    -.lst) TABS(2) OBJECT(.\OUTPUT\SCS.obj) 
+
+ stmt lvl     source
+
+    1         //****************************************************************************
+    2         // @Module        Project Settings
+    3         // @Filename      SCS.c
+    4         // @Project       EPS_TestBench_20190620.dav
+    5         //----------------------------------------------------------------------------
+    6         // @Controller    Infineon XC2365B-40F80
+    7         //
+    8         // @Compiler      Keil
+    9         //
+   10         // @Codegenerator 0.2
+   11         //
+   12         // @Description   This file contains the SCS driver.
+   13         //                      
+   14         //                Note:
+   15         //                This file should not be changed by 
+   16         //                the user.
+   17         //
+   18         //----------------------------------------------------------------------------
+   19         // @Date          2019/8/7 14:58:25
+   20         //
+   21         //****************************************************************************
+   22         
+   23         // USER CODE BEGIN (SCS_General,1)
+   24         
+   25         // USER CODE END
+   26         
+   27         
+   28         
+   29         //****************************************************************************
+   30         // @Project Includes
+   31         //****************************************************************************
+   32         
+   33         #include "MAIN.h"
+   34         
+   35         // USER CODE BEGIN (SCS_General,2)
+   36         
+   37         // USER CODE END
+   38         
+   39         
+   40         //****************************************************************************
+   41         // @Macros
+   42         //****************************************************************************
+   43         
+   44         
+   45         //****************************************************************************
+   46         // @Defines
+   47         //****************************************************************************
+   48         
+   49         // USER CODE BEGIN (SCS_General,3)
+   50         
+   51         // USER CODE END
+   52         
+   53         
+   54         // Function-like macros********************************************************
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 2   
+
+   55         
+   56         // SFR_COND_3: For polling an SFR condition up to 3 times; an "if" construct for
+   57         // a not bit-addressable bit needs >= 12 system clock cycles before 3rd check.
+   58         // Depending on the compiler (optimization) and the program location, the
+   59         // effective number of instruction cycles may be higher.
+   60         #define SFR_COND_3(Condition) (((Condition) && (Condition)) && (Condition))
+   61         #define SFR_COND_4(Condition) (((Condition) && (Condition)) && ((Condition) && \
+   62                                         (Condition)))
+   63         
+   64         // WAIT_COND_RETURN: Waits with T13 until condition is no more met or time is
+   65         // over. If the condition is met, the function will be left with the
+   66         // specified return value.
+   67         #define WAIT_COND_RETURN(Condition, ReturnValue) \
+   68         do{} while((Condition) && SCS_T13_RUN); \
+   69         if(Condition) {return (ReturnValue);}
+   70         
+   71         // GET_CYCLES: Converts Time[us] and MaxSysFreq[Hz] into cycles for driver timer,
+   72         // rounding up; for compile-time use only.
+   73         #define GET_CYCLES(Time, MaxSysFreq) \
+   74         ((unsigned int)(((((long)(Time))*((MaxSysFreq)/1000))+7999)/8000))
+   75         
+   76         
+   77         // Constants that may be overwritten*******************************************
+   78         
+   79         // If not user defined:
+   80         // Number of attempts for high precision oscillator start
+   81         #ifndef SCS_ATTEMPTS_OSC_HP
+   82         #  define SCS_ATTEMPTS_OSC_HP 10
+   83         #endif
+   84         
+   85         // If not user defined:
+   86         // Timeout in [us] for PLLV after high precision oscillator start
+   87         #ifndef SCS_TIME_OSC_HP_PLLV
+   88         #  define SCS_TIME_OSC_HP_PLLV 5000
+   89         #endif
+   90         
+   91         // If not user defined:
+   92         // Delay time/timeout in [us] for 1024 cycles after high precision oscillator
+   93         // start
+   94         #ifndef SCS_TIME_OSC_HP_1024
+   95         #  define SCS_TIME_OSC_HP_1024 1000
+   96         #endif
+   97         
+   98         
+   99         // Constants that may not be overwritten***************************************
+  100         
+  101         // Maximum system frequency values in [Hz] for timeout calculations
+  102         #define SCS_F_INT_5MHZ_MAX                       5200000
+  103         #define SCS_F_INT_10MHZ_MAX                      10400000
+  104         
+  105         // Times in [us]
+  106         #define SCS_TIME_VCO_BAND_SWITCH                 150
+  107         #define SCS_TIME_VCO_FINDIS_TO_BASE              50
+  108         #define SCS_TIME_FREQ_CHANGE                     5
+  109         #define SCS_TIME_VCO_LOCK                        200
+  110         #define SCS_TIME_FLASH_RAMP_DOWN                 500
+  111         #define SCS_TIME_FLASH_RAMP_UP                   500
+  112         #define SCS_TIME_PSMSTAT                         40
+  113         #define SCS_TIME_PLL_POWER_UP                    50
+  114         
+  115         // Driver timer cycles derived from system clock cycles, round up
+  116         #define SCS_TIMER_CYCLES_GSC                     ((50000U + 7U)/8U)
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 3   
+
+  117         #define SCS_TIMER_CYCLES_PSMSTAT                 ((77U + 7U)/8U)
+  118         
+  119         
+  120         // Constants for SCU registers*************************************************
+  121         
+  122         // Constants for EVRMCON0 register
+  123         #define SCS_MASK_EVRMCON0_CCLEV \
+  124         (3U   <<10U)  // CCLEV Current Control Level, 0(minimum)...3(maximum)
+  125         
+  126         // Constants for EVRMCON1 register
+  127         #define SCS_MASK_EVRMCON1_HPEN \
+  128         (1U   <<8U)   // HPEN High Precision Band-gap Enable
+  129         
+  130         // Constants for EVRMSET registers
+  131         #define SCS_MASK_EVRMSET_CCDIS \
+  132         (1U   <<12U)  // CCDIS Current Control Disable
+  133         
+  134         // Constants for GSCEN register
+  135         #define SCS_MASK_GSCEN_PSCBEXEN \
+  136         (1U   <<0U)   // PSCBEXEN Sequence B Exit Request Trigger Enable
+  137         #define SCS_MASK_GSCEN_SW1EN \
+  138         (1U   <<11U)  // SW1EN Software 1 Request Trigger Enable
+  139         
+  140         // Constants for GSCSTAT register
+  141         #define SCS_MASK_GSCSTAT_CURRENT \
+  142         (3U    <<0U)  // CURRENT currently used system mode
+  143         #define SCS_MASK_GSCSTAT_CURRENT_NORMAL \
+  144         (0U    <<0U)  // currently used system mode = normal
+  145         #define SCS_MASK_GSCSTAT_CURRENT_CLOCK_OFF \
+  146         (2U    <<0U)  // currently used system mode = clock off
+  147         
+  148         // Constants for GSCSWREQ register
+  149         #define SCS_MASK_GSCSWREQ_SWTRG1 \
+  150         (1U    <<0U)  // SWTRG1 Software Trigger 1
+  151         
+  152         // Constants for interrupt/trap related registers DMPMIT, DMPMITCLR, INTCLR,
+  153         // INTDIS, INTSTAT
+  154         #define SCS_MASK_INT_PVCMI1 \
+  155         (1U   <<2U)   // PVCMI1 PVCM Interrupt Request Flag 1 (w for clear)
+  156         #define SCS_MASK_INT_PVCMI2 \
+  157         (1U   <<3U)   // PVCMI2 PVCM Interrupt Request Flag 2 (w for clear)
+  158         #define SCS_MASK_INT_PVC1I1 \
+  159         (1U   <<4U)   // PVC1I1 PVC1 Interrupt Request Flag 1 (w for clear)
+  160         #define SCS_MASK_INT_PVC1I2 \
+  161         (1U   <<5U)   // PVC1I2 PVC1 Interrupt Request Flag 2 (w for clear)
+  162         #define SCS_MASK_INT_WUI \
+  163         (1U   <<7U)   // WUI Wake-up Timer Interrupt Request Flag (w for clear)
+  164         #define SCS_MASK_INT_PVC (SCS_MASK_INT_PVCMI1 | SCS_MASK_INT_PVCMI2 | \
+  165         SCS_MASK_INT_PVC1I1 | SCS_MASK_INT_PVC1I2)
+  166         
+  167         // Constants for KSCCFG/KSCFG registers
+  168         #define SCS_MASK_KSCCFG_MODEN \
+  169         (1U   <<0U)   // MODEN Module Enable
+  170         #define SCS_MASK_KSCCFG_BPMODEN \
+  171         (1U   <<1U)   // BPMODEN Bit Protection for MODEN, set to 1 for change (w)
+  172         #define SCS_MASK_KSCCFG_BPNOM \
+  173         (1U   <<7U)   // BPNOM Bit Protection for NOMCFG, set to 1 for change (w)
+  174         #define SCS_MASK_KSCCFG_BPSUM \
+  175         (1U   <<11U)  // BPSUM Bit Protection for SUMCFG, set to 1 for change (w)
+  176         #define SCS_MASK_KSCCFG_COMCFG \
+  177         (2U   <<12U)  // COMCFG Clock Off Mode Configuration
+  178                       // 0: power-down request not activated, 2: activated
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 4   
+
+  179         #define SCS_MASK_KSCCFG_BPCOM \
+  180         (1U   <<15U)  // BPCOM Bit Protection for COMCFG, set to 1 for change (w)
+  181         
+  182         // Constants for PLLCON0 register
+  183         #define SCS_MASK_PLLCON0_NDIV \
+  184         (0x3FU<<8U)   // NDIV N-Divider Value 16...40 for VCOSEL = 1
+  185         #define SCS_MASK_PLLCON0_NACK \
+  186         (1U  <<15U)   // N-Divider Ready Acknowledge
+  187         #define SCS_POS_PLLCON0_NDIV 8U
+  188         
+  189         // Constants for PLLCON1 register
+  190         #define SCS_MASK_PLLCON1_OSCSEL \
+  191         (1U   <<1U)   // OSCSEL Oscillator Input Selection
+  192                       // 0: external clock, 1: PLL internal clock
+  193         #define SCS_MASK_PLLCON1_AOSCSEL \
+  194         (1U   <<3U)   // AOSCSEL Asynchronous Oscillator Input Selection
+  195                       // 0: Configuration is controlled via bit OSCSEL
+  196                       // 1: PLL internal clock is selected asynchronously
+  197         #define SCS_MASK_PLLCON1_PDIV \
+  198         (0x0FU<<8U)   // PDIV P-Divider Value 0...15
+  199         #define SCS_MASK_PLLCON1_PACK \
+  200         (1U   <<15U)  // P-Divider Ready Acknowledge
+  201         #define SCS_POS_PLLCON1_PDIV 8U
+  202         
+  203         // Constants for PLLCON2 register
+  204         #define SCS_POS_PLLCON2_K1DIV 0U
+  205         
+  206         // Constants for PLLCON3 register
+  207         #define SCS_POS_PLLCON3_K2DIV 0U
+  208         
+  209         // Constants for PLLSTAT register
+  210         #define SCS_MASK_PLLSTAT_VCOBYST \
+  211         (1U   <<0U)   // VCOBYST PLL clock derived from divider K2 (rh)
+  212         #define SCS_MASK_PLLSTAT_OSCSELST \
+  213         (1U   <<2U)   // OSCSELST Internal clock for PLL (rh)
+  214         #define SCS_MASK_PLLSTAT_VCOLOCK \
+  215         (1U   <<3U)   // VCOLOCK PLL VCO Lock Status (rh)
+  216         #define SCS_MASK_PLLSTAT_PRDY \
+  217         (1U   <<5U)   // PRDY P-Divider Ready Status (rh)
+  218         #define SCS_MASK_PLLSTAT_NRDY \
+  219         (1U   <<6U)   // PRDY N-Divider Ready Status (rh)
+  220         #define SCS_MASK_PLLSTAT_K1RDY \
+  221         (1U   <<7U)   // K1RDY K1-Divider Ready Status (rh)
+  222         #define SCS_MASK_PLLSTAT_K2RDY \
+  223         (1U   <<8U)   // K2RDY K2-Divider Ready Status (rh)
+  224         #define SCS_MASK_PLLSTAT_VCOL0 \
+  225         (1U   <<10U)  // VCOL0 VCO Lock Detection Lost Status (rh)
+  226         #define SCS_MASK_PLLSTAT_VCOL1 \
+  227         (1U   <<11U)  // VCOL1 VCO Lock Detection Reached Status (rh)
+  228         #define SCS_MASK_PLLSTAT_OSCLOCK \
+  229         (1U   <<15U)  // OSCLOCK 2^11 OSC_HP cycles counted (rh)
+  230         
+  231         // Constants for PSCSTAT register
+  232         #define SCS_MASK_PSCSTAT_PSMSTAT \
+  233         (7U   <<2U)   // PSMSTAT (rh)
+  234         
+  235         // Constants for PVCMCON0/PVC1CON0 registers
+  236         #define SCS_MASK_PVCCON_L1INTEN \
+  237         (1U   <<5U)   // L1INTEN Level 1 Interrupt Request Enable
+  238         #define SCS_MASK_PVCCON_L1RSTEN \
+  239         (1U   <<6U)   // L1RSTEN Level 1 Reset Request Enable
+  240         #define SCS_MASK_PVCCON_L1ASEN \
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 5   
+
+  241         (1U   <<7U)   // L1ASEN Level 1 Asynchronous Action Enable
+  242         #define SCS_MASK_PVCCON_L2INTEN \
+  243         (1U   <<13U)  // L2INTEN Level 2 Interrupt Request Enable
+  244         #define SCS_MASK_PVCCON_L2RSTEN \
+  245         (1U   <<14U)  // L2RSTEN Level 2 Reset Request Enable
+  246         #define SCS_MASK_PVCCON_L2ASEN \
+  247         (1U   <<15U)  // L2ASEN Level 2 Asynchronous Action Enable
+  248         #define SCS_MASK_PVCCON_ACTIONS \
+  249         (SCS_MASK_PVCCON_L1INTEN | SCS_MASK_PVCCON_L1RSTEN | SCS_MASK_PVCCON_L1ASEN | \
+  250         SCS_MASK_PVCCON_L2INTEN | SCS_MASK_PVCCON_L2RSTEN | SCS_MASK_PVCCON_L2ASEN)
+  251         
+  252         // Constants for SEQCON register
+  253         #define SCS_MASK_SEQCON_SEQATRG \
+  254         (1U   <<0U)   // SEQATRG Sequence A Trigger (w)
+  255                       // (A only started if B is not currently active)
+  256         #define SCS_MASK_SEQCON_SEQBTRG \
+  257         (1U   <<1U)   // SEQBTRG Sequence B Trigger (w)
+  258                       // (B only started if A is not currently active)
+  259         #define SCS_MASK_SEQCON_SEQAEN \
+  260         (1U   <<2U)   // SEQAEN Sequence A Enable (rwh)
+  261                       // 0: never started, 1: started if requested, cleared after A
+  262         #define SCS_MASK_SEQCON_SEQBEN \
+  263         (1U   <<3U)   // SEQBEN Sequence B Enable (rwh)
+  264                       // 0: never started, 1: started if requested, cleared after B
+  265         #define SCS_MASK_SEQCON_WUTEN \
+  266         (1U   <<8U)   // WUTEN Sequence B is triggered by a WUT event
+  267         #define SCS_MASK_SEQCON_ESR0EN \
+  268         (1U   <<9U)   // ESR0EN Sequence B is triggered by an ESR0 event
+  269         #define SCS_MASK_SEQCON_ESR1EN \
+  270         (1U   <<10U)  // ESR1EN Sequence B is triggered by an ESR1 event
+  271         #define SCS_MASK_SEQCON_ESR2EN \
+  272         (1U   <<11U)  // ESR2EN Sequence B is triggered by an ESR2 event
+  273         #define SCS_MASK_SEQCON_STM1EN \
+  274         (1U   <<12U)  // STM1EN Sequence B is triggered by an STM1 event
+  275         #define SCS_MASK_SEQCON_GSCBY \
+  276         (1U   <<15U)  // GSCBY GSC Bypass
+  277         #define SCS_POS_SEQCON_WUTEN 8U
+  278         
+  279         // Constants for STATCLR0 register
+  280         #define SCS_MASK_STATCLR0_EMCVCO \
+  281         (1U   <<13U)  // EMCVCO Clear SYSCON0.EMSVCO (w)
+  282         
+  283         // Constants for STATCLR1 register
+  284         #define SCS_MASK_STATCLR1_VCOL0CLR \
+  285         (1U   <<0U)   // VCOL0CLR Clear PLLSTAT.VCOL0 (w)
+  286         #define SCS_MASK_STATCLR1_VCOL1CLR \
+  287         (1U   <<1U)   // VCOL1CLR Clear PLLSTAT.VCOL1 (w)
+  288         #define SCS_MASK_STATCLR1_OSC2L1CLR \
+  289         (1U   <<2U)   // OSC2L1CLR Clear HPOSCCON.OSC2L1 (w)
+  290         
+  291         // Constants for STATCLR1 register
+  292         #define SCS_MASK_STATCLR1_SETFINDIS \
+  293         (1U   <<4U)   // SETFINDIS Set PLLSTAT.FINDIS(disconnect VCO input clock) (w)
+  294         #define SCS_MASK_STATCLR1_CLRFINDIS \
+  295         (1U   <<5U)   // CLRFINDIS Clear PLLSTAT.FINDIS(connect VCO input clock) (w)
+  296         
+  297         // Constants for STMEM0 register
+  298         #define SCS_MASK_STMEM0_SSFMOD \
+  299         (0xFU <<7U)   // SSFMOD Flash modules activation
+  300                       // 0: Startup with flash, F: Startup without flash
+  301         
+  302         // Constants for SWDCON0 register
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 6   
+
+  303         #define SCS_MASK_SWDCON0_L1INTEN \
+  304         (1U   <<5U)   // L1INTEN Level 1 Interrupt Request Enable
+  305         #define SCS_MASK_SWDCON0_L1RSTEN \
+  306         (1U   <<6U)   // L1RSTEN Level 1 Reset Request Enable
+  307         #define SCS_MASK_SWDCON0_L2INTEN \
+  308         (1U   <<13U)  // L2INTEN Level 2 Interrupt Request Enable
+  309         #define SCS_MASK_SWDCON0_L2RSTEN \
+  310         (1U   <<14U)  // L2RSTEN Level 2 Reset Request Enable
+  311         #define SCS_MASK_SWDCON0_ACTIONS \
+  312         (SCS_MASK_SWDCON0_L1INTEN | SCS_MASK_SWDCON0_L1RSTEN | \
+  313         SCS_MASK_SWDCON0_L2INTEN | SCS_MASK_SWDCON0_L2RSTEN)
+  314         
+  315         // Constants for SWDCON1 register
+  316         #define SCS_MASK_SWDCON1_POWENSET \
+  317         (1U   <<1U)   // POWENSET SWD Power Saving Mode Enable Set (w)
+  318         
+  319         // Constants for trap related registers TRAPCLR, TRAPDIS, TRAPSTAT, TRAPSET
+  320         #define SCS_MASK_TRAP_FAT \
+  321         (1U   <<0U)   // FAT Flash Access Trap Request
+  322         #define SCS_MASK_TRAP_VCOLCKT \
+  323         (1U   <<7U)   // VCOLCKT VCOLCK Trap Request
+  324         
+  325         // Constants for WUCR register
+  326         #define SCS_MASK_WUCR_RUNCON_START \
+  327         (1U    <<0U)  // RUNCON Field for timer start (w)
+  328         #define SCS_MASK_WUCR_RUNCON_STOP \
+  329         (2U    <<0U)  // RUNCON Field for timer stop (w)
+  330         #define SCS_MASK_WUCR_AONCON_OFF \
+  331         (2U    <<2U)  // AONCON Field for no auto-start via PSC (w)
+  332         #define SCS_MASK_WUCR_ASPCON_ON \
+  333         (1U    <<4U)  // ASPCON Field for auto-stop after trigger (w)
+  334         #define SCS_MASK_WUCR_ASPCON_OFF \
+  335         (2U    <<4U)  // ASPCON Field for no auto-stop after trigger (w)
+  336         #define SCS_MASK_WUCR_CLRTRG \
+  337         (1U    <<7U)  // CLRTRG Clear Trigger Bit (w)
+  338         
+  339         #define SCS_POS_WUCR_CLKDIV 11U
+  340         
+  341         // Constants for non-SCU registers *********************************************
+  342         
+  343         // Constants for CPUCON1 register
+  344         #define SCS_POS_CPUCON1_VECSC     5U
+  345         
+  346         // Constants for CCU60_TCTR0 register
+  347         #define SCS_MASK_TCTR0_T13CLK \
+  348         (7U    <<8U)  // T13CLK Timer T13 Input Clock Select, f = fCC6 / 2^value)
+  349         #define SCS_MASK_TCTR0_T13CLK_8 \
+  350         (3U    <<8U)  // T13CLK Timer T13 Input Clock Select, f = fCC6 / 2^3
+  351         #define SCS_MASK_TCTR0_T13PRE \
+  352         (1U    <<11U) // T13PRE Timer T13 additional prescaler enabled
+  353         #define SCS_MASK_TCTR0_T13R \
+  354         (1U    <<12U)  // T13R Timer T13 Run Bit (rh)
+  355         #define SCS_T13_RUN (CCU60_TCTR0 & SCS_MASK_TCTR0_T13R)
+  356         
+  357         // Constants for CCU60_TCTR2 register
+  358         #define SCS_MASK_TCTR2_T13SSC \
+  359         (1U    <<1U)  // T13SSC T13 Single Shot Control
+  360         #define SCS_MASK_TCTR2_T13TEC \
+  361         (7U    <<2U)  // T13TEC T13 Trigger Event Control
+  362         #define SCS_MASK_TCTR2_T13RSEL \
+  363         (3U    <<10U) // T13RSEL T13 External Run Selection
+  364         
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 7   
+
+  365         // Constants for CCU60_TCTR4 register
+  366         #define SCS_MASK_TCTR4_T13RR \
+  367         (1U    <<8U)  // T13RR Timer 13 Run Reset (w)
+  368         #define SCS_MASK_TCTR4_T13RS \
+  369         (1U    <<9U)  // T13RS Timer 13 Run Set (w)
+  370         #define SCS_MASK_TCTR4_T13RES \
+  371         (1U    <<10U) // T13RES Timer 13 Reset (w)
+  372         #define SCS_MASK_TCTR4_T13STR \
+  373         (1U    <<14U) // T13STR Timer 13 Shadow Transfer Request (w)
+  374         
+  375         // Constants for CCU60_PISELH register
+  376         #define SCS_MASK_PISELH_ISCNT13 \
+  377         (3U    <<4U)  // ISCNT13 T13 Input Select for Counting Input
+  378         
+  379         
+  380         // Other constants*************************************************************
+  381         
+  382         // Right-aligned masks
+  383         #define SCS_MASK_4LSB  0x000FU
+  384         #define SCS_MASK_6LSB  0x003FU
+  385         #define SCS_MASK_10LSB 0x03FFU
+  386         
+  387         // Number of K2 ramp steps
+  388         #define SCS_K2_RAMP_STEPS (4U)
+  389         
+  390         
+  391         // Check of parameters*********************************************************
+  392         
+  393         // Check fR
+  394         #if (SCS_F_R < 4000000) || (SCS_F_R > 25000000)
+              #  error "SCS_F_R out of range"
+              #endif
+  397         
+  398         /* check fPLL target frequency */
+  399         #if (SCS_F_PLL_TARGET < 1000000) || (SCS_F_PLL_TARGET > 80000000)
+              #  error "SCS_F_PLL_TARGET out of range"
+              #endif
+  402         
+  403         // Check fP
+  404         #if (SCS_F_P < 4000000) || (SCS_F_P > 16000000)
+              #  error"SCS_F_P out of range"
+              #endif
+  407         
+  408         // Check fVCO
+  409         #if (SCS_F_VCO < 10000000) || (SCS_F_VCO > 160000000)
+              #  error"SCS_F_VCO out of range"
+              #  endif
+  412         
+  413         // Check P divider
+  414         #if (SCS_P < 1) || (SCS_P > 16)
+              #  error"SCS_P out of range"
+              #endif
+  417         
+  418         // Check N divider
+  419         #if (SCS_N < 16) || (SCS_N > 40)
+              #  error  "SCS_N out of range, different SCS_P required?"
+              #  endif
+  422         
+  423         // Check K2 dividers
+  424         #if (SCS_K2 < 1) || (SCS_K2 > 512)
+              #  error "SCS_K2 out of range"
+              #endif
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 8   
+
+  427         #if SCS_K2_UP_1 > 512
+              #  error "SCS_K2_UP_1 out of range"
+              #endif
+  430         #if SCS_K2_UP_2 > 512
+              #  error "SCS_K2_UP_2 out of range"
+              #endif
+  433         #if SCS_K2_UP_3 > 512
+              #  error "SCS_K2_UP_3 out of range"
+              #endif
+  436         #if SCS_K2_DOWN_1 > 512
+              #  error "SCS_K2_DOWN_1 out of range"
+              #endif
+  439         #if SCS_K2_DOWN_2 > 512
+              #  error "SCS_K2_DOWN_2 out of range"
+              #endif
+  442         #if SCS_K2_DOWN_3 > 512
+              #  error "SCS_K2_DOWN_3 out of range"
+              #endif
+  445         #if (SCS_K2_5MHZ < 1) || (SCS_K2_5MHZ > 512)
+              #  error "SCS_K2_5MHZ out of range"
+              #endif
+  448         #if (SCS_K2_10MHZ < 1) || (SCS_K2_10MHZ > 512)
+              #  error "SCS_K2_10MHZ out of range"
+              #endif
+  451         
+  452         
+  453         //****************************************************************************
+  454         // @Typedefs
+  455         //****************************************************************************
+  456         
+  457         // Type for K2 ramp
+  458         typedef struct
+  459         {
+  460           unsigned int K2;      // K2 step value
+  461           unsigned int Delay;   // delay in timer cycles after applying K2 step
+  462         } Scs_K2RampType;
+  463         
+  464         
+  465         
+  466         //****************************************************************************
+  467         // @Imported Global Variables
+  468         //****************************************************************************
+  469         
+  470         
+  471         //****************************************************************************
+  472         // @Global Variables
+  473         //****************************************************************************
+  474         
+  475         static const Scs_K2RampType Scs_K2RampNormalUp[SCS_K2_RAMP_STEPS] =
+  476         {
+  477           {SCS_K2_UP_1, GET_CYCLES(SCS_TIME_FREQ_CHANGE, SCS_F_K2_UP_1_MAX)},
+  478           {SCS_K2_UP_2, GET_CYCLES(SCS_TIME_FREQ_CHANGE, SCS_F_K2_UP_2_MAX)},
+  479           {SCS_K2_UP_3, GET_CYCLES(SCS_TIME_FREQ_CHANGE, SCS_F_K2_UP_3_MAX)},
+  480           {SCS_K2,      GET_CYCLES(SCS_TIME_FREQ_CHANGE, SCS_F_VCO/SCS_K2)}
+  481         };
+  482         
+  483         
+  484         
+  485         #if(SCS_RESTORE_TIMER_USED)
+  486           // Saved CCU60 SFRs
+  487           static unsigned int Ccu60KscfgSave;
+  488           static unsigned int Ccu60Tctr0Save;
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 9   
+
+  489           static unsigned int Ccu60Tctr2Save;
+  490           static unsigned int Ccu60PiselhSave;
+  491           static unsigned int Ccu60T13prSave;
+  492         #endif // (SCS_RESTORE_TIMER_USED)
+  493         
+  494         
+  495         //****************************************************************************
+  496         // @External Prototypes
+  497         //****************************************************************************
+  498         
+  499         
+  500         //****************************************************************************
+  501         // @Prototypes Of Local Functions
+  502         //****************************************************************************
+  503         
+  504         // Basic functions *************************************************************
+  505         
+  506         // INLINE functions
+  507         INLINE Scs_ErrorType Scs_lEnableVcoBypass(unsigned int Enable);
+  508         INLINE Scs_ErrorType Scs_lSelectExternalPllClock(void);
+  509         INLINE void Scs_lStartTimer(unsigned int Cycles);
+  510         INLINE Scs_ErrorType Scs_lWaitForVcoLock(unsigned int Timeout);
+  511         
+  512         // Functions with standard location
+  513         static Scs_ErrorType Scs_lApplyNewK1Div(unsigned int K1Div);
+  514         static Scs_ErrorType Scs_lApplyNewNDiv(unsigned int NDiv);
+  515         static Scs_ErrorType Scs_lApplyNewPDiv(unsigned int PDiv);
+  516         static Scs_ErrorType Scs_lApplyNewVcoDivs(unsigned int PDiv, unsigned int NDiv,
+  517         unsigned int K2Div);
+  518         static Scs_ErrorType Scs_lCheckFreqHighPrecOsc(void);
+  519         static Scs_ErrorType Scs_lEnableVcoLockEmerg(void);
+  520         static Scs_ErrorType Scs_lRampPll(const Scs_K2RampType *K2RampPtr);
+  521         
+  522         
+  523         //****************************************************************************
+  524         // @Local Functions
+  525         //****************************************************************************
+  526         
+  527         //*****************************************************************************
+  528         // @Function      Scs_ErrorType Scs_lWaitForVcoLock(unsigned int Timeout) 
+  529         //
+  530         //-----------------------------------------------------------------------------
+  531         // @Description   This private function waits for VCO lock.
+  532         //
+  533         //-----------------------------------------------------------------------------
+  534         // @Returnvalue   Error code, 0 = no error
+  535         //
+  536         //-----------------------------------------------------------------------------
+  537         // @Parameters    None
+  538         //
+  539         //-----------------------------------------------------------------------------
+  540         // @Date          2019/8/7
+  541         //
+  542         //-----------------------------------------------------------------------------
+  543         
+  544         // USER CODE BEGIN (Scs_lWaitForVcoLock,1)
+  545         
+  546         // USER CODE END
+  547         
+  548         INLINE Scs_ErrorType Scs_lWaitForVcoLock(unsigned int Timeout)
+  549         {
+  550  1        // Restart VCO lock detection
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 10  
+
+  551  1        SCU_PLLCON1_RESLD = 1U;
+  552  1      
+  553  1        // Start driver timer for VCO lock timeout
+  554  1        Scs_lStartTimer(Timeout);
+  555  1      
+  556  1        // Wait till VCO lock occurs or timeout is over
+  557  1        WAIT_COND_RETURN(!(SCU_PLLSTAT & SCS_MASK_PLLSTAT_VCOLOCK),
+  558  1        SCS_ERROR_TO_VCO_LOCK);
+  559  1      
+  560  1        // No error
+  561  1        return SCS_ERROR_NO_ERROR;
+  562  1      
+  563  1      } // End of function Scs_lWaitForVcoLock
+  564         
+  565         
+  566         //*****************************************************************************
+  567         // @Function      Scs_ErrorType Scs_lEnableVcoBypass(unsigned int Enable) 
+  568         //
+  569         //-----------------------------------------------------------------------------
+  570         // @Description   This private function enables or disables VCO bypass. 
+  571         //
+  572         //-----------------------------------------------------------------------------
+  573         // @Returnvalue   Error code, 0 = no error
+  574         //
+  575         //-----------------------------------------------------------------------------
+  576         // @Parameters    Enable: 0 = Disable, 1 = Enable
+  577         //
+  578         //-----------------------------------------------------------------------------
+  579         // @Date          2019/8/7
+  580         //
+  581         //-----------------------------------------------------------------------------
+  582         
+  583         // USER CODE BEGIN (Scs_lEnableVcoBypass,1)
+  584         
+  585         // USER CODE END
+  586         
+  587         INLINE Scs_ErrorType Scs_lEnableVcoBypass(unsigned int Enable)
+  588         {
+  589  1        // Enable or disable VCO bypass
+  590  1        SCU_PLLCON0_VCOBY = Enable;
+  591  1      
+  592  1        if(Enable)
+  593  1        {
+  594  2          // Wait for VCO bypass active with short timeout
+  595  2          if(SFR_COND_3(SCU_PLLSTAT & SCS_MASK_PLLSTAT_VCOBYST))
+  596  2          {
+  597  3            // error: timeout VCOBYST
+  598  3            return SCS_ERROR_TO_VCOBYST;
+  599  3          }
+  600  2        }
+  601  1        else
+  602  1        {
+  603  2          // Wait for VCO bypass inactive with short timeout
+  604  2          if(SFR_COND_3(!(SCU_PLLSTAT & SCS_MASK_PLLSTAT_VCOBYST)))
+  605  2          {
+  606  3            // error: timeout VCOBYST
+  607  3            return SCS_ERROR_TO_VCOBYST;
+  608  3          }
+  609  2        }
+  610  1      
+  611  1        // No error
+  612  1        return SCS_ERROR_NO_ERROR;
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 11  
+
+  613  1      
+  614  1      } // End of function SCS_lEnableVcoBypass
+  615         
+  616         
+  617         //*****************************************************************************
+  618         // @Function      INLINE Scs_ErrorType Scs_lSelectExternalPllClock(void)
+  619         //
+  620         //-----------------------------------------------------------------------------
+  621         // @Description   This private function selects the external clock source for
+  622         //                the PLL.
+  623         //
+  624         //-----------------------------------------------------------------------------
+  625         // @Returnvalue   Error code, 0 = no error
+  626         //
+  627         //-----------------------------------------------------------------------------
+  628         // @Parameters    None
+  629         //
+  630         //-----------------------------------------------------------------------------
+  631         // @Date          2019/8/7
+  632         //
+  633         //-----------------------------------------------------------------------------
+  634         
+  635         // USER CODE BEGIN (Scs_lSelectExternalPllClock,1)
+  636         
+  637         // USER CODE END
+  638         
+  639         INLINE Scs_ErrorType Scs_lSelectExternalPllClock(void)
+  640         {
+  641  1        // Select external clock, disable asynchronous clock selection;
+  642  1        // keep other PLLCON1 bits
+  643  1        SCU_PLLCON1 &= (~(SCS_MASK_PLLCON1_OSCSEL | SCS_MASK_PLLCON1_AOSCSEL));
+  644  1      
+  645  1        // Wait until external clock is selected (OSCSELST = 0), with short timeout
+  646  1        if(SFR_COND_3(SCU_PLLSTAT & SCS_MASK_PLLSTAT_OSCSELST))
+  647  1        {
+  648  2          // error: timeout
+  649  2          return SCS_ERROR_TO_OSCSELST;
+  650  2        }
+  651  1      
+  652  1        // no error
+  653  1        return SCS_ERROR_NO_ERROR;
+  654  1      
+  655  1      } // End of function Scs_lSelectExternalPllClock
+  656         
+  657         
+  658         //*****************************************************************************
+  659         // @Function      INLINE void Scs_lStartTimer(unsigned int Cycles)
+  660         //
+  661         //-----------------------------------------------------------------------------
+  662         // @Description   This private function starts timer T13 and waits until the
+  663         //                specified number of clocks is counted.
+  664         //
+  665         //-----------------------------------------------------------------------------
+  666         // @Returnvalue   None
+  667         //
+  668         //-----------------------------------------------------------------------------
+  669         // @Parameters    Cycles: Number of T13 clocks to count, 0...65535
+  670         //
+  671         //-----------------------------------------------------------------------------
+  672         // @Date          2019/8/7
+  673         //
+  674         //-----------------------------------------------------------------------------
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 12  
+
+  675         
+  676         // USER CODE BEGIN (Scs_lStartTimer,1)
+  677         
+  678         // USER CODE END
+  679         
+  680         INLINE void Scs_lStartTimer(unsigned int Cycles)
+  681         {
+  682  1        // Stop T13
+  683  1        CCU60_TCTR4 = SCS_MASK_TCTR4_T13RR;
+  684  1      
+  685  1        // Limit period (see following correction)
+  686  1        if(Cycles < 3U)
+  687  1        {
+  688  2          Cycles = 3U;
+  689  2        }
+  690  1      
+  691  1        // Correct period according to minimum delay
+  692  1        Cycles = Cycles - 3U;
+  693  1      
+  694  1        // Set T13 for period register = 0xFFFF
+  695  1        CCU60_T13 = ~Cycles;
+  696  1      
+  697  1        // Start T13
+  698  1        CCU60_TCTR4 = SCS_MASK_TCTR4_T13RS;
+  699  1      
+  700  1      } // End of function Scs_lStartTimer
+  701         
+  702         
+  703         //*****************************************************************************
+  704         // @Function      Scs_ErrorType Scs_lApplyNewK1Div(unsigned int K1Div)
+  705         //
+  706         //-----------------------------------------------------------------------------
+  707         // @Description   This private function applies a new K1 divider value to the 
+  708         //                PLL.
+  709         //
+  710         //-----------------------------------------------------------------------------
+  711         // @Returnvalue   Error code, 0 = no error
+  712         //
+  713         //-----------------------------------------------------------------------------
+  714         // @Parameters    K1Div: K1 divider value
+  715         //
+  716         //-----------------------------------------------------------------------------
+  717         // @Date          2019/8/7
+  718         //
+  719         //-----------------------------------------------------------------------------
+  720         
+  721         // USER CODE BEGIN (Scs_lApplyNewK1Div,1)
+  722         
+  723         // USER CODE END
+  724         
+  725         static Scs_ErrorType Scs_lApplyNewK1Div(unsigned int K1Div)
+  726         {
+  727  1      
+  728  1        if(K1Div == ((SCU_PLLCON2 >> SCS_POS_PLLCON2_K1DIV) & SCS_MASK_10LSB))
+  729  1        {
+  730  2          // New value = old value: do nothing, return without error
+  731  2          return SCS_ERROR_NO_ERROR;
+  732  2        }
+  733  1      
+  734  1        // Set K1DIV (K1 divider value), clear K1ACK (K1 acknowledge)
+  735  1        SCU_PLLCON2 = K1Div << SCS_POS_PLLCON2_K1DIV;
+  736  1      
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 13  
+
+  737  1        // wait until K1 ready = 0 with short timeout
+  738  1        if(SFR_COND_4(SCU_PLLSTAT & SCS_MASK_PLLSTAT_K1RDY))
+  739  1        {
+  740  2          // error: timeout K1DIV
+  741  2          return SCS_ERROR_TO_K1DIV;
+  742  2        }
+  743  1      
+  744  1        // Set K1 acknowledge
+  745  1        SCU_PLLCON2_K1ACK = 1U;
+  746  1          
+  747  1        // Wait until K1 ready = 1 with short timeout
+  748  1        if(SFR_COND_4(!(SCU_PLLSTAT & SCS_MASK_PLLSTAT_K1RDY)))
+  749  1        {
+  750  2          // error: timeout K1DIV
+  751  2          return SCS_ERROR_TO_K1DIV;
+  752  2        }
+  753  1      
+  754  1        // No error
+  755  1        return SCS_ERROR_NO_ERROR;
+  756  1      
+  757  1      } // End of function Scs_lApplyNewK1Div
+  758         
+  759         
+  760         //*****************************************************************************
+  761         // @Function      Scs_ErrorType Scs_lApplyNewNDiv(unsigned int NDiv) 
+  762         //
+  763         //-----------------------------------------------------------------------------
+  764         // @Description   This private function applies a new N divider value 
+  765         //                to the PLL.
+  766         //
+  767         //-----------------------------------------------------------------------------
+  768         // @Returnvalue   Error code, 0 = no error
+  769         //
+  770         //-----------------------------------------------------------------------------
+  771         // @Parameters    NDiv: N divider value
+  772         //
+  773         //-----------------------------------------------------------------------------
+  774         // @Date          2019/8/7
+  775         //
+  776         //-----------------------------------------------------------------------------
+  777         
+  778         // USER CODE BEGIN (Scs_lApplyNewNDiv,1)
+  779         
+  780         // USER CODE END
+  781         
+  782         static Scs_ErrorType Scs_lApplyNewNDiv(unsigned int NDiv)
+  783         {
+  784  1        if(NDiv == ((SCU_PLLCON0 >> SCS_POS_PLLCON0_NDIV) & SCS_MASK_6LSB))
+  785  1        {
+  786  2          // New value = old value: do nothing, return without error
+  787  2          return SCS_ERROR_NO_ERROR;
+  788  2        }
+  789  1          
+  790  1        // Change N divider value, clear N acknowledge; leave other bits unchanged
+  791  1        SCU_PLLCON0 = (SCU_PLLCON0 & (~(SCS_MASK_PLLCON0_NDIV |
+  792  1        SCS_MASK_PLLCON0_NACK))) | (NDiv << SCS_POS_PLLCON0_NDIV);
+  793  1          
+  794  1        // Wait until N ready = 0 with short timeout
+  795  1        if(SFR_COND_3(SCU_PLLSTAT & SCS_MASK_PLLSTAT_NRDY))
+  796  1        {
+  797  2          // error: timeout NDIV
+  798  2          return SCS_ERROR_TO_NDIV;
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 14  
+
+  799  2        }
+  800  1      
+  801  1        // Set N acknowledge
+  802  1        SCU_PLLCON0_NACK = 1U;
+  803  1      
+  804  1        // Wait until N ready = 1 with short timeout
+  805  1        if(SFR_COND_3(!(SCU_PLLSTAT & SCS_MASK_PLLSTAT_NRDY)))
+  806  1        {
+  807  2          // error: timeout NDIV
+  808  2          return SCS_ERROR_TO_NDIV;
+  809  2        }
+  810  1      
+  811  1        // No error
+  812  1        return SCS_ERROR_NO_ERROR;
+  813  1      
+  814  1      } // end of function Scs_lApplyNewNDiv 
+  815         
+  816         
+  817         //*****************************************************************************
+  818         // @Function      Scs_ErrorType Scs_lApplyNewPDiv(unsigned int PDiv) 
+  819         //
+  820         //-----------------------------------------------------------------------------
+  821         // @Description   This private function applies a new P divider value 
+  822         //                to the PLL.
+  823         //
+  824         //-----------------------------------------------------------------------------
+  825         // @Returnvalue   Error code, 0 = no error
+  826         //
+  827         //-----------------------------------------------------------------------------
+  828         // @Parameters    PDiv: P divider value
+  829         //
+  830         //-----------------------------------------------------------------------------
+  831         // @Date          2019/8/7
+  832         //
+  833         //-----------------------------------------------------------------------------
+  834         
+  835         // USER CODE BEGIN (Scs_lApplyNewPDiv,1)
+  836         
+  837         // USER CODE END
+  838         
+  839         static Scs_ErrorType Scs_lApplyNewPDiv(unsigned int PDiv)
+  840         {
+  841  1        if(PDiv == ((SCU_PLLCON1 >> SCS_POS_PLLCON1_PDIV) & SCS_MASK_4LSB))
+  842  1        {
+  843  2          // New value = old value: do nothing, return without error
+  844  2          return SCS_ERROR_NO_ERROR;
+  845  2        }
+  846  1      
+  847  1        // Nhange P divider value, clear P acknowledge; leave other bits unchanged
+  848  1        SCU_PLLCON1 = (SCU_PLLCON1 & (~(SCS_MASK_PLLCON1_PDIV |
+  849  1        SCS_MASK_PLLCON1_PACK))) | (PDiv << SCS_POS_PLLCON1_PDIV);
+  850  1          
+  851  1        // Wait until P ready = 0 with short timeout
+  852  1        if(SFR_COND_3(SCU_PLLSTAT & SCS_MASK_PLLSTAT_PRDY))
+  853  1        {
+  854  2          // error: timeout PDIV
+  855  2          return SCS_ERROR_TO_PDIV;
+  856  2        }
+  857  1      
+  858  1        // Set P acknowledge
+  859  1        SCU_PLLCON1_PACK = 1U;
+  860  1      
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 15  
+
+  861  1        // Wait until P ready = 1 with short timeout
+  862  1        if(SFR_COND_3(!(SCU_PLLSTAT & SCS_MASK_PLLSTAT_PRDY)))
+  863  1        {
+  864  2          // error: timeout PDIV
+  865  2          return SCS_ERROR_TO_PDIV;
+  866  2        }
+  867  1      
+  868  1        // No error
+  869  1        return SCS_ERROR_NO_ERROR;
+  870  1      
+  871  1      } // End of function Scs_lApplyNewPDiv
+  872         
+  873         
+  874         //*****************************************************************************
+  875         // @Function      Scs_ErrorType Scs_lApplyNewVcoDivs(unsigned int PDiv, 
+  876         //                unsigned int NDiv, unsigned int K2Div)
+  877         //
+  878         //-----------------------------------------------------------------------------
+  879         // @Description   This private function applies new P, N and K2 dividers 
+  880         //                to the VCO.
+  881         //
+  882         //-----------------------------------------------------------------------------
+  883         // @Returnvalue   Error code, 0 = no error
+  884         //
+  885         //-----------------------------------------------------------------------------
+  886         // @Parameters    PDiv: P divider value
+  887         //                NDiv: N divider value
+  888         //                K2Div: K2 divider value
+  889         //
+  890         //-----------------------------------------------------------------------------
+  891         // @Date          2019/8/7
+  892         //
+  893         //-----------------------------------------------------------------------------
+  894         
+  895         // USER CODE BEGIN (Scs_lApplyNewVcoDivs,1)
+  896         
+  897         // USER CODE END
+  898         
+  899         static Scs_ErrorType Scs_lApplyNewVcoDivs(unsigned int PDiv, unsigned int NDiv,
+  900         unsigned int K2Div)
+  901         {
+  902  1        Scs_ErrorType Error;
+  903  1      
+  904  1        // Set P divider, check for error
+  905  1        Error = Scs_lApplyNewPDiv(PDiv);
+  906  1        if(Error)
+  907  1        {
+  908  2          return Error;
+  909  2        }
+  910  1      
+  911  1        // Set N divider, check for error
+  912  1        Error = Scs_lApplyNewNDiv(NDiv);
+  913  1        if(Error)
+  914  1        {
+  915  2          return Error;
+  916  2        }
+  917  1      
+  918  1        // Set K2 divider, check for error
+  919  1        Error = Scs_ApplyNewK2Div(K2Div);
+  920  1        if(Error)
+  921  1        {
+  922  2          return Error;
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 16  
+
+  923  2        }
+  924  1      
+  925  1        // No error
+  926  1        return SCS_ERROR_NO_ERROR;
+  927  1      
+  928  1      } // End of function Scs_lApplyNewVcoDivs
+  929         
+  930         
+  931         //*****************************************************************************
+  932         // @Function      Scs_ErrorType Scs_lCheckFreqHighPrecOsc(void) 
+  933         //
+  934         //-----------------------------------------------------------------------------
+  935         // @Description   This private function checks the high precision oscillator 
+  936         //                for a valid output clock.
+  937         //
+  938         //-----------------------------------------------------------------------------
+  939         // @Returnvalue   Error code, 0 = no error
+  940         //
+  941         //-----------------------------------------------------------------------------
+  942         // @Parameters    None
+  943         //
+  944         //-----------------------------------------------------------------------------
+  945         // @Date          2019/8/7
+  946         //
+  947         //-----------------------------------------------------------------------------
+  948         
+  949         // USER CODE BEGIN (Scs_lCheckFreqHighPrecOsc,1)
+  950         
+  951         // USER CODE END
+  952         
+  953         static Scs_ErrorType Scs_lCheckFreqHighPrecOsc(void)
+  954         {
+  955  1        unsigned int Attempts;
+  956  1      
+  957  1        // Initialize attempts
+  958  1        Attempts = (unsigned int)SCS_ATTEMPTS_OSC_HP;
+  959  1      
+  960  1        do
+  961  1        {
+  962  2          // Start timeout for usable oscillator at fSYS = internal 5 MHz
+  963  2          Scs_lStartTimer(GET_CYCLES(SCS_TIME_OSC_HP_PLLV, SCS_F_INT_5MHZ_MAX));
+  964  2      
+  965  2          // Wait until oscillator is usable or time is over
+  966  2          WAIT_COND_RETURN(!SCU_HPOSCCON_PLLV, SCS_ERROR_TO_OSC_HP_PLLV);
+  967  2      
+  968  2          // Clear sticky bit for high precision oscillator frequency error
+  969  2          SCU_STATCLR1 = SCS_MASK_STATCLR1_OSC2L1CLR;
+  970  2      
+  971  2          // Start driver timer for 1024 cycles delay/timeout at
+  972  2          // fSYS = internal 5 MHz
+  973  2          Scs_lStartTimer(GET_CYCLES(SCS_TIME_OSC_HP_1024, SCS_F_INT_5MHZ_MAX));
+  974  2      
+  975  2          // wait till frequency error occurs, oscillator is stable or time is over
+  976  2          do{}
+  977  2          while(((!SCU_HPOSCCON_OSC2L1) &&
+  978  2          (!(SCU_PLLSTAT & SCS_MASK_PLLSTAT_OSCLOCK))) && SCS_T13_RUN);
+  979  2          if((!SCU_HPOSCCON_OSC2L1) && (SCU_PLLSTAT & SCS_MASK_PLLSTAT_OSCLOCK))
+  980  2          {
+  981  3          // no frequency error, oscillator is stable
+  982  3          return SCS_ERROR_NO_ERROR;
+  983  3          }
+  984  2          
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 17  
+
+  985  2          // Decrement attempts
+  986  2          Attempts--;
+  987  2        }
+  988  1        while(Attempts != 0U);
+  989  1      
+  990  1        // error: too many attempts
+  991  1        return SCS_ERROR_OFW_ATTEMPTS_OSC_HP;
+  992  1      
+  993  1      } // End of function Scs_lCheckFreqHighPrecOsc
+  994         
+  995         
+  996         //*****************************************************************************
+  997         // @Function      Scs_ErrorType Scs_lEnableVcoLockEmerg(void) 
+  998         //
+  999         //-----------------------------------------------------------------------------
+ 1000         // @Description   This private function enables the VCO loss-of-lock
+ 1001         //                emergency handling.
+ 1002         //
+ 1003         //-----------------------------------------------------------------------------
+ 1004         // @Returnvalue   Error code, 0 = no error
+ 1005         //
+ 1006         //-----------------------------------------------------------------------------
+ 1007         // @Parameters    None
+ 1008         //
+ 1009         //-----------------------------------------------------------------------------
+ 1010         // @Date          2019/8/7
+ 1011         //
+ 1012         //-----------------------------------------------------------------------------
+ 1013         
+ 1014         // USER CODE BEGIN (Scs_lEnableVcoLockEmerg,1)
+ 1015         
+ 1016         // USER CODE END
+ 1017         
+ 1018         static Scs_ErrorType Scs_lEnableVcoLockEmerg(void)
+ 1019         {
+ 1020  1        unsigned int Work;
+ 1021  1      
+ 1022  1        // Check if VCO is unlocked
+ 1023  1        if(!(SCU_PLLSTAT & SCS_MASK_PLLSTAT_VCOLOCK))
+ 1024  1        {
+ 1025  2          // error: VCO unlocked
+ 1026  2          return SCS_ERROR_VCO_UNLOCKED;
+ 1027  2        }
+ 1028  1      
+ 1029  1        // Clear sticky bits for VCO lock detection
+ 1030  1        SCU_STATCLR1 = SCS_MASK_STATCLR1_VCOL0CLR | SCS_MASK_STATCLR1_VCOL1CLR;
+ 1031  1      
+ 1032  1        // Disable emergency clock selection
+ 1033  1        SCU_PLLCON1_EMCLKEN = 0U;
+ 1034  1        SCU_SYSCON0_EMCLKSELEN = 0U;
+ 1035  1      
+ 1036  1        // Clear loss-of-lock emergency status
+ 1037  1        SCU_STATCLR0 = SCS_MASK_STATCLR0_EMCVCO;
+ 1038  1      
+ 1039  1        // Enable emergency input clock disconnection
+ 1040  1        SCU_PLLCON1_EMFINDISEN = 1U;
+ 1041  1      
+ 1042  1        // Clear VCOLCK trap request flag
+ 1043  1        SCU_TRAPCLR = SCS_MASK_TRAP_VCOLCKT;
+ 1044  1      
+ 1045  1        // Enable VCOLCK trap request
+ 1046  1        SCU_TRAPDIS &= (~SCS_MASK_TRAP_VCOLCKT);
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 18  
+
+ 1047  1      
+ 1048  1        // Read PLLSTAT
+ 1049  1        Work = SCU_PLLSTAT;
+ 1050  1      
+ 1051  1        // Check if sticky bit for VCO lock detection is set or VCO is unlocked
+ 1052  1        if((Work & (SCS_MASK_PLLSTAT_VCOL0 | SCS_MASK_PLLSTAT_VCOL1)) ||
+ 1053  1        (!(Work & SCS_MASK_PLLSTAT_VCOLOCK)))
+ 1054  1        {
+ 1055  2          // error: VCO unlocked
+ 1056  2          return SCS_ERROR_VCO_UNLOCKED;
+ 1057  2        }
+ 1058  1      
+ 1059  1        // No error
+ 1060  1        return SCS_ERROR_NO_ERROR;
+ 1061  1      
+ 1062  1      } // End of function Scs_lEnableVcoLockEmerg
+ 1063         
+ 1064         
+ 1065         //*****************************************************************************
+ 1066         // @Function      Scs_ErrorType Scs_lRampPll(Scs_K2RampType *K2RampPtr) 
+ 1067         //
+ 1068         //-----------------------------------------------------------------------------
+ 1069         // @Description   This private function applies a stepwise ramp-up or ramp-down
+ 1070         //                 of the PLL output frequency using a set of K2 dividers 
+ 1071         //                 and delay values.
+ 1072         //
+ 1073         //-----------------------------------------------------------------------------
+ 1074         // @Returnvalue   Error code, 0 = no error
+ 1075         //
+ 1076         //-----------------------------------------------------------------------------
+ 1077         // @Parameters    None
+ 1078         //
+ 1079         //-----------------------------------------------------------------------------
+ 1080         // @Date          2019/8/7
+ 1081         //
+ 1082         //-----------------------------------------------------------------------------
+ 1083         
+ 1084         // USER CODE BEGIN (Scs_lRampPll,1)
+ 1085         
+ 1086         // USER CODE END
+ 1087         
+ 1088         static Scs_ErrorType Scs_lRampPll(const Scs_K2RampType *K2RampPtr)
+ 1089         {
+ 1090  1        Scs_ErrorType Error;
+ 1091  1        unsigned int Counter;
+ 1092  1      
+ 1093  1        /* initialize counter */
+ 1094  1        Counter = SCS_K2_RAMP_STEPS;
+ 1095  1          
+ 1096  1        /* stop T13 */
+ 1097  1        CCU60_TCTR4 = SCS_MASK_TCTR4_T13RR;
+ 1098  1      
+ 1099  1        do
+ 1100  1        {
+ 1101  2          if(K2RampPtr->K2 != 0U)
+ 1102  2          {
+ 1103  3            /* wait until previous delay time in this function is over */
+ 1104  3            do { }
+ 1105  3            while(SCS_T13_RUN);
+ 1106  3      
+ 1107  3            /* apply new K2 divider */
+ 1108  3            Error = Scs_ApplyNewK2Div(K2RampPtr->K2 - 1U);
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 19  
+
+ 1109  3      
+ 1110  3            /* start delay time from table for frequency change */
+ 1111  3            Scs_lStartTimer(K2RampPtr->Delay);
+ 1112  3      
+ 1113  3            /* check for error */
+ 1114  3            if(Error)
+ 1115  3            {
+ 1116  4              return Error;
+ 1117  4            }
+ 1118  3          }
+ 1119  2          /* select next K2 data */
+ 1120  2          K2RampPtr++;
+ 1121  2      
+ 1122  2          /* decrement counter */
+ 1123  2          Counter--;
+ 1124  2      
+ 1125  2        /* repeat until counter = 0 */
+ 1126  2        }while(Counter != 0U);
+ 1127  1      
+ 1128  1        /* wait until last delay time in this function is over */
+ 1129  1        do { }
+ 1130  1        while(SCS_T13_RUN);
+ 1131  1      
+ 1132  1        /* no error */
+ 1133  1        return SCS_ERROR_NO_ERROR;
+ 1134  1      
+ 1135  1      } /* end of function Scs_lRampPll */
+ 1136         
+ 1137         
+ 1138         //*****************************************************************************
+ 1139         // @Function      Scs_ErrorType Scs_ApplyNewK2Div(unsigned int K2Div)
+ 1140         //
+ 1141         //-----------------------------------------------------------------------------
+ 1142         // @Description   This global function applies a new K2 divider value 
+ 1143         //                to the PLL.
+ 1144         //
+ 1145         //-----------------------------------------------------------------------------
+ 1146         // @Returnvalue   Error code, 0 = no error
+ 1147         //
+ 1148         //-----------------------------------------------------------------------------
+ 1149         // @Parameters    K2Div: K2 divider value
+ 1150         //
+ 1151         //-----------------------------------------------------------------------------
+ 1152         // @Date          2019/8/7
+ 1153         //
+ 1154         //-----------------------------------------------------------------------------
+ 1155         
+ 1156         // USER CODE BEGIN (Scs_lApplyNewK2Div,1)
+ 1157         
+ 1158         // USER CODE END
+ 1159         
+ 1160         Scs_ErrorType Scs_ApplyNewK2Div(unsigned int K2Div)
+ 1161         {
+ 1162  1        if(K2Div == ((SCU_PLLCON3 >> SCS_POS_PLLCON3_K2DIV) & SCS_MASK_10LSB))
+ 1163  1        {
+ 1164  2          // New value = old value: do nothing, return without error
+ 1165  2          return SCS_ERROR_NO_ERROR;
+ 1166  2        }
+ 1167  1      
+ 1168  1        // set K2DIV (K2 divider value), clear K2ACK (K2 acknowledge)
+ 1169  1        SCU_PLLCON3 = K2Div << SCS_POS_PLLCON3_K2DIV;
+ 1170  1          
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 20  
+
+ 1171  1        // Wait until K2 ready = 0 with short timeout
+ 1172  1        if(SFR_COND_3(SCU_PLLSTAT & SCS_MASK_PLLSTAT_K2RDY))
+ 1173  1        {
+ 1174  2          // error: timeout K2DIV
+ 1175  2          return SCS_ERROR_TO_K2DIV;
+ 1176  2        }
+ 1177  1      
+ 1178  1        // Set K2 acknowledge
+ 1179  1        SCU_PLLCON3_K2ACK = 1U;
+ 1180  1          
+ 1181  1        // Wait until K2 ready = 1 with short timeout
+ 1182  1        if(SFR_COND_3(!(SCU_PLLSTAT & SCS_MASK_PLLSTAT_K2RDY)))
+ 1183  1        {
+ 1184  2         // error: timeout K2DIV
+ 1185  2          return SCS_ERROR_TO_K2DIV;
+ 1186  2        }
+ 1187  1      
+ 1188  1        // No error
+ 1189  1        return SCS_ERROR_NO_ERROR;
+ 1190  1      
+ 1191  1      } // End of function Scs_ApplyNewK2Div
+ 1192         
+ 1193         
+ 1194         //*****************************************************************************
+ 1195         // @Function      Scs_ErrorType Scs_GoFromBaseModeToNormalMode(void)
+ 1196         //
+ 1197         //-----------------------------------------------------------------------------
+ 1198         // @Description   This global function performs a transition from base mode
+ 1199         //                 to normal mode.
+ 1200         //
+ 1201         //-----------------------------------------------------------------------------
+ 1202         // @Returnvalue   Error code, 0 = no error
+ 1203         //
+ 1204         //-----------------------------------------------------------------------------
+ 1205         // @Parameters    None
+ 1206         //
+ 1207         //-----------------------------------------------------------------------------
+ 1208         // @Date          2019/8/7
+ 1209         //
+ 1210         //-----------------------------------------------------------------------------
+ 1211         
+ 1212         // USER CODE BEGIN (Scs_GoFromBaseModeToNormalMode,1)
+ 1213         
+ 1214         // USER CODE END
+ 1215         
+ 1216         Scs_ErrorType Scs_GoFromBaseModeToNormalMode(void)
+ 1217         {
+ 1218  1        Scs_ErrorType Error;
+ 1219  1      
+ 1220  1        // Enable high precision oscillator (may already be enabled)
+ 1221  1        Scs_EnableHighPrecOsc(1U);
+ 1222  1      
+ 1223  1        // Set K1 divider = 1 for VCO bypass frequency of 5 MHz, check for error
+ 1224  1        Error = Scs_lApplyNewK1Div(1U - 1U);
+ 1225  1        if(Error)
+ 1226  1        {
+ 1227  2          return Error;
+ 1228  2        }
+ 1229  1      
+ 1230  1        // Enable VCO bypass, check for error; new fSYS = internal 5 MHz
+ 1231  1        Error = Scs_lEnableVcoBypass(1U);
+ 1232  1        if(Error)
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 21  
+
+ 1233  1        {
+ 1234  2          return Error;
+ 1235  2        }
+ 1236  1      
+ 1237  1        // Select VCO band 1
+ 1238  1        SCU_PLLCON0_VCOSEL = 1U;
+ 1239  1      
+ 1240  1        // Wait band switch delay time at fSYS = internal 5 MHz
+ 1241  1        // Start timer T13
+ 1242  1        Scs_lStartTimer(GET_CYCLES(SCS_TIME_VCO_BAND_SWITCH, SCS_F_INT_5MHZ_MAX));
+ 1243  1      
+ 1244  1        // Wait until delay time clocks are counted
+ 1245  1        do { }
+ 1246  1        while(SCS_T13_RUN);
+ 1247  1      
+ 1248  1        // Set final P/N dividers and K2 divider for 10 MHz, check for error
+ 1249  1        Error = Scs_lApplyNewVcoDivs((((unsigned int)SCS_P)) - 1U,
+ 1250  1        (((unsigned int)SCS_N)) - 1U,(((unsigned int)SCS_K2_10MHZ)) - 1U);
+ 1251  1        if(Error)
+ 1252  1        {
+ 1253  2          return Error;
+ 1254  2        }
+ 1255  1      
+ 1256  1        // Disconnect VCO from clock input (enable free-running oscillator)
+ 1257  1        SCU_STATCLR1 = SCS_MASK_STATCLR1_SETFINDIS;
+ 1258  1      
+ 1259  1        // Wait until base frequency is reached at fSYS = internal 5 MHz
+ 1260  1        // Start timer T13
+ 1261  1        Scs_lStartTimer(GET_CYCLES(SCS_TIME_VCO_FINDIS_TO_BASE, SCS_F_INT_5MHZ_MAX));
+ 1262  1      
+ 1263  1        // Wait until delay time clocks are counted
+ 1264  1        do { }
+ 1265  1        while(SCS_T13_RUN);
+ 1266  1      
+ 1267  1        // Wait for high precision oscillator, check for error
+ 1268  1        Error = Scs_lCheckFreqHighPrecOsc();
+ 1269  1        if(Error)
+ 1270  1        {
+ 1271  2          return Error;
+ 1272  2        }
+ 1273  1      
+ 1274  1        // Disable VCO bypass, check for error; new fSYS ~ (50 MHz/SCS_K2_10MHZ)
+ 1275  1        // for fVCO = 160 MHz: SCS_K2_10MHZ = 16, new fSYS ~ 3.2 MHz
+ 1276  1        Error = Scs_lEnableVcoBypass(0U);
+ 1277  1        if(Error)
+ 1278  1        {
+ 1279  2          return Error;
+ 1280  2        }
+ 1281  1      
+ 1282  1        // Select external clock as PLL source, check for error
+ 1283  1        Error = Scs_lSelectExternalPllClock();
+ 1284  1        if(Error)
+ 1285  1        {
+ 1286  2          return Error;
+ 1287  2        }
+ 1288  1      
+ 1289  1        // Connect VCO to clock input, new fSYS goes to 10 MHz
+ 1290  1        SCU_STATCLR1 = SCS_MASK_STATCLR1_CLRFINDIS;
+ 1291  1      
+ 1292  1        // Wait for VCO lock at fSYS ~ 10 MHz, check for error
+ 1293  1        Error = Scs_lWaitForVcoLock(GET_CYCLES(SCS_TIME_VCO_LOCK,
+ 1294  1        SCS_F_INT_10MHZ_MAX));
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 22  
+
+ 1295  1        if(Error)
+ 1296  1        {
+ 1297  2          return Error;
+ 1298  2        }
+ 1299  1      
+ 1300  1        // Enable VCOLCK emergency, check for error
+ 1301  1        Error = Scs_lEnableVcoLockEmerg();
+ 1302  1        if(Error)
+ 1303  1        {
+ 1304  2          return Error;
+ 1305  2        }
+ 1306  1      
+ 1307  1        // Ramp up PLL from 10 MHz to fSYS = final value in normal mode,
+ 1308  1        // check for error */
+ 1309  1        Error = Scs_lRampPll(Scs_K2RampNormalUp);
+ 1310  1        if(Error)
+ 1311  1        {
+ 1312  2          return Error;
+ 1313  2        }
+ 1314  1      
+ 1315  1        // No error
+ 1316  1        return SCS_ERROR_NO_ERROR;
+ 1317  1      
+ 1318  1      } // End of function Scs_GoFromBaseModeToNormalMode
+ 1319         
+ 1320         
+ 1321         //*****************************************************************************
+ 1322         // @Function      void Scs_InitTimer(void)
+ 1323         //
+ 1324         //-----------------------------------------------------------------------------
+ 1325         // @Description   This global function CCU6 timer T13 as driver timer;
+ 1326         //                previous CCU6 register contents may be saved.
+ 1327         //
+ 1328         //-----------------------------------------------------------------------------
+ 1329         // @Returnvalue   None
+ 1330         //
+ 1331         //-----------------------------------------------------------------------------
+ 1332         // @Parameters    None
+ 1333         //
+ 1334         //-----------------------------------------------------------------------------
+ 1335         // @Date          2019/8/7
+ 1336         //
+ 1337         //-----------------------------------------------------------------------------
+ 1338         
+ 1339         // USER CODE BEGIN (Scs_InitTimer,1)
+ 1340         
+ 1341         // USER CODE END
+ 1342         
+ 1343         void Scs_InitTimer(void)
+ 1344         {
+ 1345  1        volatile unsigned int Work;
+ 1346  1      
+ 1347  1        #if(SCS_RESTORE_TIMER_USED)
+ 1348  1          // Save CCU60 SFRs (CCU60_TCTR4 needs not be saved)
+ 1349  1          Ccu60KscfgSave = CCU60_KSCFG;
+ 1350  1          Ccu60Tctr0Save = CCU60_TCTR0;
+ 1351  1          Ccu60Tctr2Save = CCU60_TCTR2;
+ 1352  1          Ccu60PiselhSave = CCU60_PISELH;
+ 1353  1          Ccu60T13prSave = CCU60_T13PR;
+ 1354  1        #endif // (SCS_RESTORE_TIMER_USED)
+ 1355  1      
+ 1356  1        // Enable CCU60 module
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 23  
+
+ 1357  1        CCU60_KSCFG = SCS_MASK_KSCCFG_MODEN | SCS_MASK_KSCCFG_BPMODEN;
+ 1358  1      
+ 1359  1        // Read CCU60_KSCFG back to avoid pipeline effects
+ 1360  1        Work = CCU60_KSCFG;
+ 1361  1      
+ 1362  1        // Stop T13, clear T13
+ 1363  1        CCU60_TCTR4 = SCS_MASK_TCTR4_T13RR | SCS_MASK_TCTR4_T13RES;
+ 1364  1      
+ 1365  1        // Change T13 clock to fCC6/8, clear T13 additional prescaler;
+ 1366  1        // leave other bits unchanged
+ 1367  1        CCU60_TCTR0 = (CCU60_TCTR0 & (~(SCS_MASK_TCTR0_T13CLK |
+ 1368  1        SCS_MASK_TCTR0_T13PRE))) | SCS_MASK_TCTR0_T13CLK_8;
+ 1369  1      
+ 1370  1        // Enable T13 single-shot, disable T13 trigger events and T13 external start;
+ 1371  1        // leave other bits unchanged
+ 1372  1        CCU60_TCTR2 = (CCU60_TCTR2 & (~(SCS_MASK_TCTR2_T13TEC |
+ 1373  1        SCS_MASK_TCTR2_T13RSEL))) | SCS_MASK_TCTR2_T13SSC;
+ 1374  1      
+ 1375  1        // Enable T13 prescaler as T13 input, leave other bits unchanged
+ 1376  1        CCU60_PISELH = CCU60_PISELH & (~SCS_MASK_PISELH_ISCNT13);
+ 1377  1      
+ 1378  1        // set T13 period to maximum
+ 1379  1        CCU60_T13PR = 0xFFFF;
+ 1380  1      
+ 1381  1        // Enable T13 shadow transfer for period setting
+ 1382  1        CCU60_TCTR4 = SCS_MASK_TCTR4_T13STR;
+ 1383  1      
+ 1384  1      } // End of function SCS_InitTimer
+ 1385         
+ 1386         
+ 1387         #if(SCS_RESTORE_TIMER_USED)
+ 1388         //*****************************************************************************
+ 1389         // @Function      void Scs_RestoreTimer(void)
+ 1390         //
+ 1391         //-----------------------------------------------------------------------------
+ 1392         // @Description   This global function restores CCU6 register contents
+ 1393         //                saved during the previous execution of Scs_InitTimer.
+ 1394         //
+ 1395         //-----------------------------------------------------------------------------
+ 1396         // @Returnvalue   None
+ 1397         //
+ 1398         //-----------------------------------------------------------------------------
+ 1399         // @Parameters    None
+ 1400         //
+ 1401         //-----------------------------------------------------------------------------
+ 1402         // @Date          2019/8/7
+ 1403         //
+ 1404         //-----------------------------------------------------------------------------
+ 1405         
+ 1406         // USER CODE BEGIN (Scs_RestoreTimer,1)
+ 1407         
+ 1408         // USER CODE END
+ 1409         
+ 1410           void Scs_RestoreTimer(void)
+ 1411           {
+ 1412  1          unsigned int Work;
+ 1413  1      
+ 1414  1          // Stop T13, clear T13
+ 1415  1          CCU60_TCTR4 = SCS_MASK_TCTR4_T13RR | SCS_MASK_TCTR4_T13RES;
+ 1416  1      
+ 1417  1          // Restore CCU60_TCTR0
+ 1418  1          CCU60_TCTR0 = Ccu60Tctr0Save;
+C166 COMPILER V7.57.0, SCS                                                                 08/19/2019 16:33:27 PAGE 24  
+
+ 1419  1      
+ 1420  1          // Restore CCU60_TCTR2
+ 1421  1          CCU60_TCTR2 = Ccu60Tctr2Save;
+ 1422  1      
+ 1423  1          // Restore CCU60_PISELH
+ 1424  1          CCU60_PISELH = Ccu60PiselhSave;
+ 1425  1      
+ 1426  1          // Restore T13 period
+ 1427  1          CCU60_T13PR = Ccu60T13prSave;
+ 1428  1      
+ 1429  1          // Enable T13 shadow transfer for period setting
+ 1430  1          CCU60_TCTR4 = SCS_MASK_TCTR4_T13STR;
+ 1431  1      
+ 1432  1          // Restore CCU60_KSCFG, enable change
+ 1433  1          CCU60_KSCFG = Ccu60KscfgSave | SCS_MASK_KSCCFG_BPMODEN |
+ 1434  1          SCS_MASK_KSCCFG_BPNOM | SCS_MASK_KSCCFG_BPSUM | SCS_MASK_KSCCFG_BPCOM;
+ 1435  1      
+ 1436  1          // Read CCU60_KSCFG back to avoid pipeline effects
+ 1437  1          Work = CCU60_KSCFG;
+ 1438  1      
+ 1439  1        } // End of function SCS_RestoreTimer
+ 1440         #endif // (SCS_RESTORE_TIMER_USED)
+ 1441         
+ 1442         
+ 1443         
+ 1444         
+
+
+MODULE INFORMATION:   INITIALIZED  UNINITIALIZED
+  CODE SIZE        =        1362     --------
+  NEAR-CONST SIZE  =          16     --------
+  FAR-CONST SIZE   =    --------     --------
+  HUGE-CONST SIZE  =    --------     --------
+  XHUGE-CONST SIZE =    --------     --------
+  NEAR-DATA SIZE   =          10     --------
+  FAR-DATA SIZE    =    --------     --------
+  XHUGE-DATA SIZE  =    --------     --------
+  IDATA-DATA SIZE  =    --------     --------
+  SDATA-DATA SIZE  =    --------     --------
+  BDATA-DATA SIZE  =    --------     --------
+  HUGE-DATA SIZE   =    --------     --------
+  BIT SIZE         =    --------     --------
+  INIT'L SIZE      =    --------     --------
+END OF MODULE INFORMATION.
+
+
+C166 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

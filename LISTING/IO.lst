@@ -1,0 +1,265 @@
+C166 COMPILER V7.57.0, IO                                                                  08/19/2019 16:33:28 PAGE 1   
+
+
+C166 COMPILER V7.57.0, COMPILATION OF MODULE IO
+OBJECT MODULE PLACED IN .\OUTPUT\IO.obj
+COMPILER INVOKED BY: C:\Program Files (x86)\Keil_v5\C166\BIN\C166.EXE IO.c MODV2 BROWSE MODV2 DEBUG PRINT(.\LISTING\IO.l
+                    -st) TABS(2) OBJECT(.\OUTPUT\IO.obj) 
+
+ stmt lvl     source
+
+    1         //****************************************************************************
+    2         // @Module        Parallel Ports
+    3         // @Filename      IO.c
+    4         // @Project       EPS_TestBench_20190620.dav
+    5         //----------------------------------------------------------------------------
+    6         // @Controller    Infineon XC2365B-40F80
+    7         //
+    8         // @Compiler      Keil
+    9         //
+   10         // @Codegenerator 0.2
+   11         //
+   12         // @Description   This file contains functions that use the IO module.
+   13         //
+   14         //----------------------------------------------------------------------------
+   15         // @Date          2019/8/7 14:58:27
+   16         //
+   17         //****************************************************************************
+   18         
+   19         // USER CODE BEGIN (IO_General,1)
+   20         
+   21         // USER CODE END
+   22         
+   23         /*
+   24         ******************************************************************************
+   25         @Note
+   26         
+   27         Notes for Port P7:
+   28         P7.2: 触发按键开关
+   29         
+   30         ******************************************************************************
+   31         */
+   32         
+   33         
+   34         
+   35         //****************************************************************************
+   36         // @Project Includes
+   37         //****************************************************************************
+   38         
+   39         #include "MAIN.h"
+   40         
+   41         // USER CODE BEGIN (IO_General,2)
+   42         
+   43         // USER CODE END
+   44         
+   45         
+   46         //****************************************************************************
+   47         // @Macros
+   48         //****************************************************************************
+   49         
+   50         // USER CODE BEGIN (IO_General,3)
+   51         
+   52         // USER CODE END
+   53         
+   54         
+C166 COMPILER V7.57.0, IO                                                                  08/19/2019 16:33:28 PAGE 2   
+
+   55         //****************************************************************************
+   56         // @Defines
+   57         //****************************************************************************
+   58         
+   59         // USER CODE BEGIN (IO_General,4)
+   60         
+   61         // USER CODE END
+   62         
+   63         
+   64         //****************************************************************************
+   65         // @Typedefs
+   66         //****************************************************************************
+   67         
+   68         // USER CODE BEGIN (IO_General,5)
+   69         
+   70         // USER CODE END
+   71         
+   72         
+   73         //****************************************************************************
+   74         // @Imported Global Variables
+   75         //****************************************************************************
+   76         
+   77         // USER CODE BEGIN (IO_General,6)
+   78         
+   79         // USER CODE END
+   80         
+   81         
+   82         //****************************************************************************
+   83         // @Global Variables
+   84         //****************************************************************************
+   85         
+   86         // USER CODE BEGIN (IO_General,7)
+   87         
+   88         // USER CODE END
+   89         
+   90         
+   91         //****************************************************************************
+   92         // @External Prototypes
+   93         //****************************************************************************
+   94         
+   95         // USER CODE BEGIN (IO_General,8)
+   96         
+   97         // USER CODE END
+   98         
+   99         
+  100         //****************************************************************************
+  101         // @Prototypes Of Local Functions
+  102         //****************************************************************************
+  103         
+  104         // USER CODE BEGIN (IO_General,9)
+  105         
+  106         // USER CODE END
+  107         
+  108         
+  109         //****************************************************************************
+  110         // @Function      void IO_vInit(void) 
+  111         //
+  112         //----------------------------------------------------------------------------
+  113         // @Description   This is the initialization function of the IO function 
+  114         //                library. It is assumed that the SFRs used by this library 
+  115         //                are in reset state. 
+  116         //
+C166 COMPILER V7.57.0, IO                                                                  08/19/2019 16:33:28 PAGE 3   
+
+  117         //----------------------------------------------------------------------------
+  118         // @Returnvalue   None
+  119         //
+  120         //----------------------------------------------------------------------------
+  121         // @Parameters    None
+  122         //
+  123         //----------------------------------------------------------------------------
+  124         // @Date          2019/8/7
+  125         //
+  126         //****************************************************************************
+  127         
+  128         // USER CODE BEGIN (IO_Function,1)
+  129         
+  130         // USER CODE END
+  131         
+  132         void IO_vInit(void)
+  133         {
+  134  1        // USER CODE BEGIN (IO_Function,2)
+  135  1      
+  136  1        // USER CODE END
+  137  1      
+  138  1      
+  139  1        ///  -----------------------------------------------------------------------
+  140  1        ///  Configuration of Port P0:
+  141  1        ///  -----------------------------------------------------------------------
+  142  1        ///  - no pin of port P0 is used
+  143  1      
+  144  1      
+  145  1        ///  -----------------------------------------------------------------------
+  146  1        ///  Configuration of Port P1:
+  147  1        ///  -----------------------------------------------------------------------
+  148  1        ///  - no pin of port P1 is used
+  149  1      
+  150  1      
+  151  1        ///  -----------------------------------------------------------------------
+  152  1        ///  Configuration of Port P2:
+  153  1        ///  -----------------------------------------------------------------------
+  154  1        ///  P2.0 is used as alternate input for the CAN0 Receive input(RXDC0C)
+  155  1        ///  P2.1 is used as alternate output for the CAN0 Transmit output(TXDC0C)
+  156  1        ///  - push/pull output is selected
+  157  1      
+  158  1        ///  P2.0 - P2.3 output driver characteristic: strong driver
+  159  1        ///  P2.4 - P2.7 output driver characteristic: strong driver
+  160  1        ///  P2.8 - P2.13 output driver characteristic: strong driver
+  161  1      
+  162  1        ///  P2.0 - P2.3 output edge characteristic: sharp edge mode
+  163  1        ///  P2.4 - P2.7 output edge characteristic: sharp edge mode
+  164  1        ///  P2.8 - P2.13 output edge characteristic: sharp edge mode
+  165  1      
+  166  1      
+  167  1        ///  -----------------------------------------------------------------------
+  168  1        ///  Configuration of Port P4:
+  169  1        ///  -----------------------------------------------------------------------
+  170  1        ///  - no pin of port P4 is used
+  171  1      
+  172  1      
+  173  1        ///  -----------------------------------------------------------------------
+  174  1        ///  Configuration of Port P5:
+  175  1        ///  -----------------------------------------------------------------------
+  176  1        ///  - no pin of port P5 is used
+  177  1        ///  - Port5 Data register P5(Read only)
+  178  1      
+C166 COMPILER V7.57.0, IO                                                                  08/19/2019 16:33:28 PAGE 4   
+
+  179  1      
+  180  1        ///  -----------------------------------------------------------------------
+  181  1        ///  Configuration of Port P6:
+  182  1        ///  -----------------------------------------------------------------------
+  183  1        ///  - no pin of port P6 is used
+  184  1      
+  185  1      
+  186  1        ///  -----------------------------------------------------------------------
+  187  1        ///  Configuration of Port P7:
+  188  1        ///  -----------------------------------------------------------------------
+  189  1        ///  P7.2 is used as general input
+  190  1        ///  - pull device is tristate 
+  191  1      
+  192  1        ///  P7.0 - P7.3 output driver characteristic: strong driver
+  193  1        ///  P7.4 - P7.4 output driver characteristic: strong driver
+  194  1      
+  195  1        ///  P7.0 - P7.3 output edge characteristic: sharp edge mode
+  196  1        ///  P7.4 - P7.4 output edge characteristic: sharp edge mode
+  197  1      
+  198  1      
+  199  1        ///  -----------------------------------------------------------------------
+  200  1        ///  Configuration of Port P10:
+  201  1        ///  -----------------------------------------------------------------------
+  202  1        ///  - no pin of port P10 is used
+  203  1      
+  204  1      
+  205  1        ///  -----------------------------------------------------------------------
+  206  1        ///  Configuration of Port P15:
+  207  1        ///  -----------------------------------------------------------------------
+  208  1        ///  - no pin of port P15 is used
+  209  1        ///  - Port15 Data register P15(Read only)
+  210  1      
+  211  1      
+  212  1      
+  213  1        // USER CODE BEGIN (IO_Function,3)
+  214  1      
+  215  1        // USER CODE END
+  216  1      
+  217  1      } //  End of function IO_vInit
+  218         
+  219         
+  220         
+  221         
+  222         // USER CODE BEGIN (IO_General,10)
+  223         
+  224         // USER CODE END
+  225         
+*** WARNING C174 IN LINE 381 OF IO.c: 'Scs_EnableHighPrecOsc': unreferenced 'static' function
+
+
+MODULE INFORMATION:   INITIALIZED  UNINITIALIZED
+  CODE SIZE        =           2     --------
+  NEAR-CONST SIZE  =    --------     --------
+  FAR-CONST SIZE   =    --------     --------
+  HUGE-CONST SIZE  =    --------     --------
+  XHUGE-CONST SIZE =    --------     --------
+  NEAR-DATA SIZE   =    --------     --------
+  FAR-DATA SIZE    =    --------     --------
+  XHUGE-DATA SIZE  =    --------     --------
+  IDATA-DATA SIZE  =    --------     --------
+  SDATA-DATA SIZE  =    --------     --------
+  BDATA-DATA SIZE  =    --------     --------
+C166 COMPILER V7.57.0, IO                                                                  08/19/2019 16:33:28 PAGE 5   
+
+  HUGE-DATA SIZE   =    --------     --------
+  BIT SIZE         =    --------     --------
+  INIT'L SIZE      =    --------     --------
+END OF MODULE INFORMATION.
+
+
+C166 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)
